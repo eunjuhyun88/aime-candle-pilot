@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Wallet, MessageCircle, Activity, BarChart3 } from 'lucide-react';
 import { PositionsTable } from './PositionsTable';
 
@@ -6,10 +6,18 @@ type TabType = 'positions' | 'vibes' | 'whales' | 'orders';
 
 interface ZoneAnalysisTabsProps {
   positions: any[];
+  selectedCandle?: { time: string } | null;
 }
 
-export const ZoneAnalysisTabs = ({ positions }: ZoneAnalysisTabsProps) => {
+export const ZoneAnalysisTabs = ({ positions, selectedCandle }: ZoneAnalysisTabsProps) => {
   const [activeTab, setActiveTab] = useState<TabType>('positions');
+
+  // Auto-switch to whales tab when candle is selected
+  useEffect(() => {
+    if (selectedCandle) {
+      setActiveTab('whales');
+    }
+  }, [selectedCandle]);
 
   const tabs = [
     { id: 'positions' as TabType, label: 'Positions', icon: Wallet },
@@ -31,7 +39,7 @@ export const ZoneAnalysisTabs = ({ positions }: ZoneAnalysisTabsProps) => {
   ];
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col p-4">
       {/* Tabs */}
       <div className="flex gap-1 border-b border-border pb-3 mb-4">
         {tabs.map((tab) => {
@@ -55,7 +63,7 @@ export const ZoneAnalysisTabs = ({ positions }: ZoneAnalysisTabsProps) => {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-y-auto scrollbar-thin">
         {activeTab === 'positions' && (
           <PositionsTable positions={positions} />
         )}
@@ -92,6 +100,11 @@ export const ZoneAnalysisTabs = ({ positions }: ZoneAnalysisTabsProps) => {
 
         {activeTab === 'whales' && (
           <div className="space-y-3">
+            {selectedCandle && (
+              <div className="text-xs text-primary animate-fade-in mb-3 font-mono">
+                &gt; {selectedCandle.time} 시점의 고래 거래 1,200 BTC 유입 포착됨. 매수 압력 82%...
+              </div>
+            )}
             {whaleData.map((item) => (
               <div key={item.id} className="terminal-card p-3">
                 <div className="flex items-center justify-between mb-2">

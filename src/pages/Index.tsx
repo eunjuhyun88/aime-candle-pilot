@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Zap, MessageSquare, TrendingUp, Activity, Settings, Bell, Search } from 'lucide-react';
+import { Zap, MessageSquare, TrendingUp, Activity, Settings, Bell, Search, Target, ShieldCheck, MousePointer2 } from 'lucide-react';
 import { AlphaSignalCard } from '@/components/AlphaSignalCard';
 import { PlaybookItem } from '@/components/PlaybookItem';
 import { ChartOverlay } from '@/components/ChartOverlay';
@@ -107,6 +107,8 @@ export default function StockHooTerminal() {
   const [showWhaleHeat, setShowWhaleHeat] = useState(true);
   const [showSR, setShowSR] = useState(true);
   const [messages, setMessages] = useState(mockMessages);
+  const [selectedCandle, setSelectedCandle] = useState<{ time: string } | null>(null);
+  const [aiMessage, setAiMessage] = useState("차트의 특정 구간을 클릭하거나 드로잉하여 분석을 시작하세요.");
 
   const handleSendMessage = (content: string) => {
     const newMessage = {
@@ -122,10 +124,16 @@ export default function StockHooTerminal() {
     console.log('Applying signal:', signal);
   };
 
+  const handleChartClick = () => {
+    const candleData = { time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) };
+    setSelectedCandle(candleData);
+    setAiMessage(`${candleData.time} 구간의 스마트머니 흐름을 분석 중입니다...`);
+  };
+
   return (
-    <div className="flex h-screen bg-background text-foreground overflow-hidden font-mono">
+    <div className="flex h-screen bg-background text-foreground overflow-hidden font-mono selection:bg-primary/30">
       {/* LEFT: Intel Panel */}
-      <aside className="w-72 border-r border-border bg-card flex flex-col">
+      <aside className="w-72 border-r border-border bg-card flex flex-col transition-all duration-300">
         {/* Logo */}
         <div className="p-5 border-b border-border">
           <div className="flex items-center gap-3">
@@ -241,13 +249,26 @@ export default function StockHooTerminal() {
         />
 
         {/* Chart Area */}
-        <div className="flex-1 relative bg-background overflow-hidden">
+        <div 
+          className="flex-1 relative bg-background overflow-hidden cursor-crosshair group"
+          onClick={handleChartClick}
+        >
           <ChartOverlay
             whaleZones={mockWhaleZones}
             srLines={mockSRLines}
             showWhaleHeat={showWhaleHeat}
             showSR={showSR}
           />
+          
+          {/* Selected Zone Indicator */}
+          {selectedCandle && (
+            <div className="absolute top-[30%] left-[40%] border-2 border-signal-green/50 bg-signal-green/5 p-4 rounded-lg animate-pulse-glow z-10">
+              <div className="flex items-center gap-2">
+                <ShieldCheck size={14} className="text-signal-green" />
+                <span className="text-[10px] font-bold text-signal-green">ZONE SELECTED: $63.2K - $63.8K</span>
+              </div>
+            </div>
+          )}
           
           {/* Chart Placeholder */}
           <div className="absolute inset-0 flex items-center justify-center">
@@ -256,12 +277,12 @@ export default function StockHooTerminal() {
                 <TrendingUp size={28} className="text-muted-foreground" />
               </div>
               <p className="text-muted-foreground text-sm mb-1">TradingView Chart</p>
-              <p className="text-muted-foreground/50 text-[10px]">Advanced charting integration ready</p>
+              <p className="text-muted-foreground/50 text-[10px]">Click anywhere to simulate zone selection</p>
             </div>
           </div>
 
           {/* Candle Candlestick Mock */}
-          <div className="absolute bottom-20 left-0 right-0 h-40 flex items-end justify-center gap-1 px-20 opacity-20">
+          <div className="absolute bottom-20 left-0 right-0 h-40 flex items-end justify-center gap-1 px-20 opacity-20 pointer-events-none">
             {Array.from({ length: 40 }).map((_, i) => {
               const height = Math.random() * 80 + 20;
               const isGreen = Math.random() > 0.4;
@@ -277,8 +298,8 @@ export default function StockHooTerminal() {
         </div>
 
         {/* Bottom Zone Analysis */}
-        <div className="h-64 border-t border-border bg-card p-4">
-          <ZoneAnalysisTabs positions={mockPositions} />
+        <div className="h-64 border-t border-border bg-card">
+          <ZoneAnalysisTabs positions={mockPositions} selectedCandle={selectedCandle} />
         </div>
       </main>
 
@@ -304,6 +325,24 @@ export default function StockHooTerminal() {
 
         <div className="flex-1 overflow-hidden flex flex-col p-4">
           <div className="flex-1 overflow-y-auto scrollbar-thin space-y-4 mb-4">
+            {/* Context Message */}
+            <div className="bg-muted/50 p-4 rounded-2xl rounded-tl-none border border-border text-xs leading-relaxed">
+              {aiMessage}
+            </div>
+            
+            {/* Analysis Result when candle selected */}
+            {selectedCandle && (
+              <div className="space-y-3 animate-fade-in">
+                <div className="bg-primary/10 border border-primary/30 p-3 rounded-xl text-[11px]">
+                  <p className="text-primary font-bold mb-1">💡 분석 완료</p>
+                  <p className="text-muted-foreground leading-snug">현재 지지선에서 스마트머니 매집이 확인됩니다. 돌파 시 숏 스퀴즈 발생 확률 74%입니다.</p>
+                </div>
+                <button className="w-full py-3 bg-foreground text-background text-xs font-black rounded-xl hover:bg-primary hover:text-primary-foreground transition-all flex items-center justify-center gap-2">
+                  <Target size={14} /> 전략 실행 (One-Click)
+                </button>
+              </div>
+            )}
+            
             <CopilotChat
               messages={messages}
               onSendMessage={handleSendMessage}
@@ -323,6 +362,20 @@ export default function StockHooTerminal() {
                 onApply={handleApplySignal}
               />
             ))}
+          </div>
+        </div>
+
+        {/* Chat Input */}
+        <div className="p-4 border-t border-border bg-muted/30">
+          <div className="relative group">
+            <input 
+              type="text" 
+              placeholder="차트 패턴이나 고래 활동 질문..."
+              className="w-full bg-background/40 border border-border rounded-xl px-4 py-3 text-xs focus:outline-none focus:border-primary transition-all placeholder:text-muted-foreground"
+            />
+            <button className="absolute right-3 top-2.5 p-1 text-primary group-hover:scale-110 transition-all">
+              <MousePointer2 size={16} />
+            </button>
           </div>
         </div>
       </aside>
