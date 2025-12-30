@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
-import { Zap, MessageSquare, Activity, TrendingUp, Send } from 'lucide-react';
+import { Zap, MessageSquare, Activity, TrendingUp, Send, Newspaper } from 'lucide-react';
 
 declare global {
   interface Window {
@@ -98,7 +99,7 @@ const StockHooTerminal = () => {
 
   return (
     <div className="h-screen bg-background text-foreground font-sans flex flex-col overflow-hidden">
-      {/* Minimal Header */}
+      {/* Header with Navigation */}
       <header className="h-12 border-b border-border bg-card flex items-center px-4 justify-between shrink-0">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
@@ -108,15 +109,28 @@ const StockHooTerminal = () => {
             <span className="text-lg font-black tracking-tight">STOCKHOO</span>
           </div>
           <div className="h-6 w-px bg-border" />
+          <nav className="flex items-center gap-1">
+            <span className="px-3 py-1.5 text-xs font-medium text-foreground bg-primary/10 rounded">
+              Trading
+            </span>
+            <Link 
+              to="/intel" 
+              className="px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded transition-colors flex items-center gap-1.5"
+            >
+              <Newspaper size={12} />
+              Intel
+            </Link>
+          </nav>
+          <div className="h-6 w-px bg-border" />
           <div className="flex items-center gap-2">
             <span className="font-bold">BTC/USDT</span>
-            <span className="text-signal-green font-bold">$64,250.50</span>
-            <span className="text-xs text-signal-green bg-signal-green/10 px-2 py-0.5 rounded">+2.4%</span>
+            <span className="text-green-500 font-bold">$64,250.50</span>
+            <span className="text-xs text-green-500 bg-green-500/10 px-2 py-0.5 rounded">+2.4%</span>
           </div>
         </div>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <div className="flex items-center gap-1">
-            <div className="w-2 h-2 rounded-full bg-signal-green animate-pulse" />
+            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
             <span>Live</span>
           </div>
         </div>
