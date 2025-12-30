@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
-import { Zap, MessageSquare, Activity, TrendingUp, Send } from 'lucide-react';
+import { MessageSquare, Activity, TrendingUp, Send, Zap } from 'lucide-react';
 import AppLayout from '@/components/layout/AppLayout';
 
 declare global {
@@ -168,153 +167,69 @@ const TradingTerminal = () => {
 
   return (
     <AppLayout showAiPanel aiPanel={AiPanel}>
-      <ResizablePanelGroup direction="horizontal" className="h-full">
-        {/* LEFT: Alpha Signals */}
-        <ResizablePanel defaultSize={22} minSize={15} maxSize={30}>
-          <div className="h-full bg-card/50 border-r border-border flex flex-col">
-            <div className="p-4 border-b border-border">
-              <div className="flex items-center gap-2">
-                <Zap size={14} className="text-green-500" />
-                <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Alpha Signals</h3>
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
-              {[
-                { type: 'bullish', title: 'Whale Accumulation', conf: 89, entry: '63,250', target: '65,800' },
-                { type: 'bullish', title: 'GEX Flip Positive', conf: 76, entry: '63,500', target: '66,000' },
-              ].map((signal, i) => (
-                <div 
-                  key={i}
-                  className="bg-card p-3 rounded-lg border border-primary/20 hover:border-primary/50 transition-all cursor-pointer"
-                  onClick={() => syncAllPanels(parseFloat(signal.entry.replace(',', '')), 'now')}
-                >
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-[10px] font-bold text-green-500">▲ BULLISH</span>
-                    <span className="text-[10px] text-muted-foreground">{signal.conf}%</span>
-                  </div>
-                  <h4 className="text-sm font-bold mb-2">{signal.title}</h4>
-                  <div className="grid grid-cols-2 gap-2 text-[10px]">
-                    <div className="bg-muted/30 rounded p-1.5 text-center">
-                      <p className="text-muted-foreground">Entry</p>
-                      <p className="font-mono font-bold">{signal.entry}</p>
-                    </div>
-                    <div className="bg-green-500/10 rounded p-1.5 text-center">
-                      <p className="text-green-500">Target</p>
-                      <p className="font-mono font-bold text-green-500">{signal.target}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-
-              {activeContext && (
-                <div className="mt-4 p-3 bg-primary/5 border border-primary/20 rounded-lg animate-fade-in">
-                  <p className="text-[10px] text-primary font-bold mb-1">SYNCED CONTEXT</p>
-                  <p className="text-xs font-mono">${activeContext.price.toLocaleString()}</p>
-                  <p className="text-[10px] text-muted-foreground mt-1">{activeContext.whaleFlow}</p>
-                </div>
-              )}
-            </div>
+      <div className="h-full flex flex-col">
+        {/* Chart Toolbar */}
+        <div className="h-10 border-b border-border bg-card/50 flex items-center px-3 gap-2 shrink-0">
+          <select
+            value={selectedSymbol}
+            onChange={(e) => setSelectedSymbol(e.target.value)}
+            className="bg-muted/50 border border-border text-xs font-bold rounded px-2 py-1 outline-none focus:border-primary"
+          >
+            <option value="BINANCE:BTCUSDT">BTC/USDT</option>
+            <option value="BINANCE:ETHUSDT">ETH/USDT</option>
+            <option value="BINANCE:SOLUSDT">SOL/USDT</option>
+            <option value="NASDAQ:AAPL">AAPL</option>
+            <option value="NASDAQ:TSLA">TSLA</option>
+          </select>
+          <div className="h-4 w-px bg-border" />
+          <div className="flex gap-1">
+            {['1m', '5m', '15m', '1H', '4H', '1D'].map((tf) => (
+              <button
+                key={tf}
+                className="px-2 py-1 text-[10px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded transition-colors"
+              >
+                {tf}
+              </button>
+            ))}
           </div>
-        </ResizablePanel>
+          <div className="ml-auto flex items-center gap-2">
+            <button 
+              onClick={() => syncAllPanels(64250, new Date().toLocaleTimeString())}
+              className="px-3 py-1 text-[10px] font-bold bg-primary/20 text-primary hover:bg-primary/30 rounded transition-colors"
+            >
+              🐋 Whale Heat
+            </button>
+          </div>
+        </div>
+        
+        {/* Chart - Takes all remaining space */}
+        <div 
+          id="tradingview_chart" 
+          ref={chartContainerRef} 
+          className="flex-1 min-h-0 w-full bg-[#0B0E11]"
+        />
 
-        <ResizableHandle withHandle />
-
-        {/* CENTER: Chart + Context Dashboard */}
-        <ResizablePanel defaultSize={78} minSize={50}>
-          <ResizablePanelGroup direction="vertical">
-            <ResizablePanel defaultSize={70} minSize={50}>
-              <div className="h-full bg-[#0B0E11] relative flex flex-col">
-                <div className="h-10 border-b border-border bg-card/50 flex items-center px-3 gap-2 shrink-0">
-                  <select
-                    value={selectedSymbol}
-                    onChange={(e) => setSelectedSymbol(e.target.value)}
-                    className="bg-muted/50 border border-border text-xs font-bold rounded px-2 py-1 outline-none focus:border-primary"
-                  >
-                    <option value="BINANCE:BTCUSDT">BTC/USDT</option>
-                    <option value="BINANCE:ETHUSDT">ETH/USDT</option>
-                    <option value="BINANCE:SOLUSDT">SOL/USDT</option>
-                    <option value="NASDAQ:AAPL">AAPL</option>
-                    <option value="NASDAQ:TSLA">TSLA</option>
-                  </select>
-                  <div className="h-4 w-px bg-border" />
-                  <div className="flex gap-1">
-                    {['1m', '5m', '15m', '1H', '4H', '1D'].map((tf) => (
-                      <button
-                        key={tf}
-                        className="px-2 py-1 text-[10px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded transition-colors"
-                      >
-                        {tf}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="ml-auto flex items-center gap-2">
-                    <button 
-                      onClick={() => syncAllPanels(64250, new Date().toLocaleTimeString())}
-                      className="px-3 py-1 text-[10px] font-bold bg-primary/20 text-primary hover:bg-primary/30 rounded transition-colors"
-                    >
-                      🐋 Whale Heat
-                    </button>
-                  </div>
-                </div>
-                
-                <div 
-                  id="tradingview_chart" 
-                  ref={chartContainerRef} 
-                  className="flex-1 w-full"
-                />
-              </div>
-            </ResizablePanel>
-
-            <ResizableHandle withHandle />
-
-            <ResizablePanel defaultSize={30} minSize={15} maxSize={45}>
-              <div className="h-full bg-card border-t border-border flex flex-col">
-                <div className="flex items-center gap-4 px-4 py-2 border-b border-border">
-                  {['Activities', 'Vibes', 'News'].map((tab, i) => (
-                    <button
-                      key={tab}
-                      className={`text-xs font-medium transition-colors ${
-                        i === 0 ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      {tab}
-                    </button>
-                  ))}
-                  {activeContext && (
-                    <span className="ml-auto text-[10px] text-primary bg-primary/10 px-2 py-0.5 rounded">
-                      Synced: ${activeContext.price.toLocaleString()}
-                    </span>
-                  )}
-                </div>
-                
-                <div className="flex-1 overflow-y-auto p-4 font-mono text-xs space-y-2">
-                  {activeContext ? (
-                    <>
-                      <div className="flex items-center gap-2 text-green-500">
-                        <Activity size={12} />
-                        <span>[WHALE] {activeContext.whaleFlow} @ ${activeContext.price.toLocaleString()}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-primary">
-                        <Zap size={12} />
-                        <span>[SENTIMENT] {activeContext.sentiment}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <MessageSquare size={12} />
-                        <span>[NEWS] {activeContext.news}</span>
-                      </div>
-                    </>
-                  ) : (
-                    <p className="text-muted-foreground italic">
-                      차트에서 캔들을 선택하면 해당 시점의 온체인/소셜/뉴스 데이터가 표시됩니다.
-                    </p>
-                  )}
-                </div>
-              </div>
-            </ResizablePanel>
-          </ResizablePanelGroup>
-        </ResizablePanel>
-      </ResizablePanelGroup>
+        {/* Bottom Context Bar - Compact */}
+        {activeContext && (
+          <div className="h-10 border-t border-border bg-card/50 flex items-center px-4 gap-6 text-xs shrink-0">
+            <div className="flex items-center gap-2 text-green-500">
+              <Activity size={12} />
+              <span className="font-mono">{activeContext.whaleFlow}</span>
+            </div>
+            <div className="flex items-center gap-2 text-primary">
+              <Zap size={12} />
+              <span>{activeContext.sentiment}</span>
+            </div>
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <MessageSquare size={12} />
+              <span className="truncate max-w-xs">{activeContext.news}</span>
+            </div>
+            <span className="ml-auto text-[10px] text-primary bg-primary/10 px-2 py-0.5 rounded">
+              Synced: ${activeContext.price.toLocaleString()}
+            </span>
+          </div>
+        )}
+      </div>
     </AppLayout>
   );
 };
