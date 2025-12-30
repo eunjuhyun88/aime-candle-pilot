@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { InsightData } from '@/pages/Intel';
-import { Send, Sparkles, Bot, User, Activity } from 'lucide-react';
+import { Send, Sparkles, Bot, User, Wallet, Coins, Activity, Zap, TrendingUp, AlertCircle } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
 
 interface Message {
   id: string;
@@ -15,20 +17,23 @@ interface AimeSidebarProps {
 }
 
 const quickQuestions = [
-  "Undervalued L2 tokens?",
-  "Solana whale accumulation?",
-  "BTC next resistance?",
-  "Top trending narratives?",
-  "ETH breakout likelihood?",
-  "Best DeFi plays?",
+  { label: "🐋 고래 지갑 추적", query: "현재 BTC, ETH 고래 지갑들의 움직임을 분석해줘. 최근 24시간 큰 거래 내역과 스마트머니 동향 알려줘." },
+  { label: "📊 SOL 온체인", query: "솔라나 온체인 데이터 분석해줘. 활성 지갑 수, TPS, TVL 변화, 주요 DEX 거래량 추이를 알려줘." },
+  { label: "💰 ETH 흐름", query: "이더리움 거래소 입출금 흐름 분석해줘. 스마트머니가 축적하는지 청산하는지 판단해줘." },
+  { label: "🔥 DeFi TVL", query: "현재 주요 DeFi 프로토콜들의 TVL 순위와 변동을 분석하고, 자금 흐름에서 트렌드를 찾아줘." },
+  { label: "⛽ Gas 트렌드", query: "이더리움과 L2들의 가스비 트렌드 분석하고, 네트워크 혼잡도 기준으로 최적 거래 시간대 추천해줘." },
+  { label: "🎯 토큰 분석", query: "요즘 뜨는 알트코인 중 온체인 데이터가 좋은 종목 3개 추천하고, 홀더 분포와 거래량 분석해줘." },
 ];
 
+const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/onchain-chat`;
+
 const AimeSidebar = ({ onUpdate }: AimeSidebarProps) => {
+  const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
       role: 'assistant',
-      content: '안녕하세요! 시장에 대해 무엇이든 물어보세요. 토큰 분석, 트렌드 예측, 투자 전략 등을 도와드릴 수 있습니다.',
+      content: '안녕하세요! 저는 온체인 분석 전문 AI입니다. 🔍\n\n다음과 같은 것들을 도와드릴 수 있어요:\n• 지갑 주소 분석 및 고래 추적\n• 토큰 홀더 분포 및 유동성 분석\n• 거래소 입출금 흐름\n• DeFi TVL 및 수익률 분석\n\n질문해주세요!',
       timestamp: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
     }
   ]);
@@ -43,94 +48,35 @@ const AimeSidebar = ({ onUpdate }: AimeSidebarProps) => {
     }
   }, [messages, isTyping]);
 
-  const generateResponse = (query: string): { content: string; insightData?: InsightData } => {
-    const lowerQuery = query.toLowerCase();
-    
-    if (lowerQuery.includes('sol') || lowerQuery.includes('솔라나')) {
-      return {
-        content: 'Solana(SOL)을 분석하고 있습니다...\n\n현재 SOL은 강한 상승 모멘텀을 보이고 있으며, 생태계 성장에 의해 추진되고 있습니다.',
-        insightData: {
-          type: 'token_analysis',
-          token: 'Solana',
-          symbol: 'SOL',
-          price: 145.30,
-          change: 5.2,
-          trend: 'Bullish',
-          description: 'SOL is experiencing strong bullish momentum driven by ecosystem growth. Recent developments in DePIN and gaming sectors are attracting significant developer activity.',
-          stats: {
-            tps: '2,845',
-            active_wallets: '1.2M',
-            tvl: '$1.8B',
-          },
-          chart_data: Array.from({ length: 14 }, (_, i) => ({
-            date: `Day ${i + 1}`,
-            price: 130 + Math.random() * 20 + (i * 1.5),
-          })),
-        },
-      };
+  const streamChat = async (userMessages: { role: string; content: string }[]) => {
+    const response = await fetch(CHAT_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      },
+      body: JSON.stringify({ 
+        messages: userMessages,
+        userId: user?.id 
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      if (response.status === 429) {
+        throw new Error("요청 한도 초과. 잠시 후 다시 시도해주세요.");
+      }
+      if (response.status === 402) {
+        throw new Error("크레딧이 부족합니다.");
+      }
+      throw new Error(errorData.error || "AI 서비스 오류");
     }
-    
-    if (lowerQuery.includes('eth') || lowerQuery.includes('이더리움')) {
-      return {
-        content: '이더리움(ETH)을 분석하고 있습니다...\n\n현재 ETH는 안정적인 축적 단계에 있으며, Dencun 업그레이드가 임박해 있습니다.',
-        insightData: {
-          type: 'token_analysis',
-          token: 'Ethereum',
-          symbol: 'ETH',
-          price: 3200,
-          change: 2.8,
-          trend: 'Bullish',
-          description: 'ETH is showing strong momentum with the upcoming Dencun upgrade. Layer 2 activity is increasing, and staking yields remain attractive.',
-          stats: {
-            tps: '15',
-            active_wallets: '850K',
-            tvl: '$50B',
-          },
-          chart_data: Array.from({ length: 14 }, (_, i) => ({
-            date: `Day ${i + 1}`,
-            price: 3000 + Math.random() * 300 + (i * 15),
-          })),
-        },
-      };
-    }
-    
-    if (lowerQuery.includes('btc') || lowerQuery.includes('비트코인') || lowerQuery.includes('resistance')) {
-      return {
-        content: 'BTC의 다음 주요 저항선은 $68,500입니다.\n\n현재 가격 구간에서 스마트머니 축적이 관찰되고 있으며, $64,200 피벗 레벨을 돌파하면 상승 가속화가 예상됩니다.',
-      };
-    }
-    
-    if (lowerQuery.includes('whale') || lowerQuery.includes('고래')) {
-      return {
-        content: '현재 고래 활동 분석 결과:\n\n• BTC: 대형 지갑 축적 진행 중 (+2,400 BTC 24h)\n• ETH: 거래소 잔액 감소 (축적 신호)\n• SOL: 중립적 흐름\n\n스마트머니는 현재 조정 구간에서 매수 포지션을 구축하고 있습니다.',
-      };
-    }
-    
-    if (lowerQuery.includes('narrative') || lowerQuery.includes('trend')) {
-      return {
-        content: '현재 주목해야 할 주요 내러티브:\n\n1. 🤖 AI + Crypto (TAO, RNDR, FET)\n2. 🏛️ RWA 토큰화 (ONDO, MAPLE)\n3. 🌐 DePIN (HNT, MOBILE)\n4. 🎮 GameFi 재부상 (IMX, BEAM)\n\nAI 섹터가 가장 강한 모멘텀을 보이고 있습니다.',
-      };
-    }
-    
-    if (lowerQuery.includes('defi')) {
-      return {
-        content: '현재 추천 DeFi 플레이:\n\n1. AAVE - 대출 프로토콜 리더, TVL 상승 중\n2. GMX - 퍼페추얼 DEX, 수수료 수익 안정적\n3. PENDLE - 수익률 토큰화, 혁신적 모델\n\n리스크 관리를 위해 포트폴리오 분산을 권장합니다.',
-      };
-    }
-    
-    if (lowerQuery.includes('l2') || lowerQuery.includes('undervalued')) {
-      return {
-        content: '저평가된 L2 토큰 분석:\n\n1. MANTA - 프라이버시 L2, TVL 빠르게 성장\n2. BLAST - 네이티브 수익률 제공\n3. SCROLL - zkEVM 기술 선도\n\n이들 프로젝트는 기술력 대비 시가총액이 낮아 성장 잠재력이 있습니다.',
-      };
-    }
-    
-    return {
-      content: '현재 시장 상황을 분석한 결과, BTC는 $63,500 지지선 위에서 강세를 유지하고 있습니다. 스마트머니 유입이 지속되고 있어 상승 가능성이 높습니다.\n\n더 구체적인 분석이 필요하시면 특정 토큰이나 주제에 대해 질문해 주세요!',
-    };
+
+    return response;
   };
 
   const handleSendMessage = async (messageText: string) => {
-    if (!messageText.trim()) return;
+    if (!messageText.trim() || isTyping) return;
     
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -143,29 +89,157 @@ const AimeSidebar = ({ onUpdate }: AimeSidebarProps) => {
     setInput('');
     setIsTyping(true);
     
-    // Simulate AI thinking time
-    await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 1000));
-    
-    const response = generateResponse(messageText);
-    
-    const assistantMessage: Message = {
-      id: (Date.now() + 1).toString(),
-      role: 'assistant',
-      content: response.content,
-      timestamp: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
-    };
-    
-    setMessages(prev => [...prev, assistantMessage]);
-    setIsTyping(false);
-    
-    if (response.insightData) {
-      onUpdate(response.insightData);
+    try {
+      // Prepare messages for API (exclude timestamps and ids)
+      const apiMessages = [...messages, userMessage]
+        .filter(m => m.role === 'user' || m.role === 'assistant')
+        .map(m => ({ role: m.role, content: m.content }));
+
+      const response = await streamChat(apiMessages);
+      
+      if (!response.body) {
+        throw new Error("No response body");
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let textBuffer = "";
+      let assistantContent = "";
+      let streamDone = false;
+
+      // Create assistant message placeholder
+      const assistantMessageId = (Date.now() + 1).toString();
+      setMessages(prev => [...prev, {
+        id: assistantMessageId,
+        role: 'assistant',
+        content: '',
+        timestamp: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
+      }]);
+
+      while (!streamDone) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        textBuffer += decoder.decode(value, { stream: true });
+
+        let newlineIndex: number;
+        while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
+          let line = textBuffer.slice(0, newlineIndex);
+          textBuffer = textBuffer.slice(newlineIndex + 1);
+
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (line.startsWith(":") || line.trim() === "") continue;
+          if (!line.startsWith("data: ")) continue;
+
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === "[DONE]") {
+            streamDone = true;
+            break;
+          }
+
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+            if (content) {
+              assistantContent += content;
+              setMessages(prev => prev.map(m => 
+                m.id === assistantMessageId 
+                  ? { ...m, content: assistantContent }
+                  : m
+              ));
+            }
+          } catch {
+            textBuffer = line + "\n" + textBuffer;
+            break;
+          }
+        }
+      }
+
+      // Final flush
+      if (textBuffer.trim()) {
+        for (let raw of textBuffer.split("\n")) {
+          if (!raw) continue;
+          if (raw.endsWith("\r")) raw = raw.slice(0, -1);
+          if (raw.startsWith(":") || raw.trim() === "") continue;
+          if (!raw.startsWith("data: ")) continue;
+          const jsonStr = raw.slice(6).trim();
+          if (jsonStr === "[DONE]") continue;
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+            if (content) {
+              assistantContent += content;
+              setMessages(prev => prev.map(m => 
+                m.id === assistantMessageId 
+                  ? { ...m, content: assistantContent }
+                  : m
+              ));
+            }
+          } catch { /* ignore */ }
+        }
+      }
+
+      // Check for token analysis in response
+      const lowerContent = assistantContent.toLowerCase();
+      if (lowerContent.includes('sol') && (lowerContent.includes('분석') || lowerContent.includes('analysis'))) {
+        onUpdate({
+          type: 'token_analysis',
+          token: 'Solana',
+          symbol: 'SOL',
+          price: 145.30,
+          change: 5.2,
+          trend: 'Bullish',
+          description: assistantContent.substring(0, 200) + '...',
+          stats: {
+            tps: '2,845',
+            active_wallets: '1.2M',
+            tvl: '$1.8B',
+          },
+          chart_data: Array.from({ length: 14 }, (_, i) => ({
+            date: `Day ${i + 1}`,
+            price: 130 + Math.random() * 20 + (i * 1.5),
+          })),
+        });
+      } else if (lowerContent.includes('eth') && (lowerContent.includes('분석') || lowerContent.includes('analysis'))) {
+        onUpdate({
+          type: 'token_analysis',
+          token: 'Ethereum',
+          symbol: 'ETH',
+          price: 3200,
+          change: 2.8,
+          trend: 'Bullish',
+          description: assistantContent.substring(0, 200) + '...',
+          stats: {
+            tps: '15',
+            active_wallets: '850K',
+            tvl: '$50B',
+          },
+          chart_data: Array.from({ length: 14 }, (_, i) => ({
+            date: `Day ${i + 1}`,
+            price: 3000 + Math.random() * 300 + (i * 15),
+          })),
+        });
+      }
+
+    } catch (error) {
+      console.error("Chat error:", error);
+      toast.error(error instanceof Error ? error.message : "채팅 오류가 발생했습니다.");
+      
+      // Remove the empty assistant message if error occurred
+      setMessages(prev => {
+        const lastMsg = prev[prev.length - 1];
+        if (lastMsg?.role === 'assistant' && lastMsg.content === '') {
+          return prev.slice(0, -1);
+        }
+        return prev;
+      });
+    } finally {
+      setIsTyping(false);
     }
   };
 
-  const handleQuickQuestion = async (question: string) => {
-    setLoadingQuestion(question);
-    await handleSendMessage(question);
+  const handleQuickQuestion = async (query: string, label: string) => {
+    setLoadingQuestion(label);
+    await handleSendMessage(query);
     setLoadingQuestion(null);
   };
 
@@ -185,12 +259,12 @@ const AimeSidebar = ({ onUpdate }: AimeSidebarProps) => {
             </div>
             <div>
               <h3 className="text-sm font-bold">Alpha Agent</h3>
-              <p className="text-[10px] text-muted-foreground">AI Research Assistant</p>
+              <p className="text-[10px] text-muted-foreground">On-chain Intelligence</p>
             </div>
           </div>
           <div className="flex items-center gap-1">
             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            <span className="text-xs text-green-500">Online</span>
+            <span className="text-xs text-green-500">Live</span>
           </div>
         </div>
       </div>
@@ -227,7 +301,7 @@ const AimeSidebar = ({ onUpdate }: AimeSidebarProps) => {
             </div>
           ))}
           
-          {isTyping && (
+          {isTyping && messages[messages.length - 1]?.content === '' && (
             <div className="flex justify-start animate-fade-in">
               <div className="bg-muted/30 p-3 rounded-2xl rounded-tl-none border border-border">
                 <div className="flex items-center gap-2">
@@ -246,19 +320,19 @@ const AimeSidebar = ({ onUpdate }: AimeSidebarProps) => {
         </div>
       </ScrollArea>
 
-      {/* Quick Questions */}
+      {/* Quick Questions - On-chain focused */}
       <div className="px-4 py-2 border-t border-border shrink-0">
         <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2">
-          {quickQuestions.map((question) => (
+          {quickQuestions.map((q) => (
             <button
-              key={question}
-              onClick={() => handleQuickQuestion(question)}
-              disabled={loadingQuestion !== null}
+              key={q.label}
+              onClick={() => handleQuickQuestion(q.query, q.label)}
+              disabled={isTyping || loadingQuestion !== null}
               className={`shrink-0 px-3 py-1.5 text-xs bg-muted/50 hover:bg-muted rounded-full transition-colors ${
-                loadingQuestion === question ? 'opacity-50 cursor-wait' : ''
+                loadingQuestion === q.label ? 'opacity-50 cursor-wait' : ''
               }`}
             >
-              {question}
+              {q.label}
             </button>
           ))}
         </div>
@@ -271,8 +345,9 @@ const AimeSidebar = ({ onUpdate }: AimeSidebarProps) => {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask about tokens, trends, strategies..."
+            placeholder="지갑 주소, 토큰, 온체인 데이터 질문..."
             className="w-full bg-muted/30 border border-border rounded-xl px-4 py-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-all pr-12"
+            disabled={isTyping}
           />
           <button
             type="submit"
