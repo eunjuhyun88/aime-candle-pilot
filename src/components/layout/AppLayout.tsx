@@ -1,4 +1,4 @@
-import React, { useState, useEffect, cloneElement, isValidElement } from 'react';
+import React, { useState, useEffect, cloneElement, isValidElement, useRef, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
   TrendingUp, 
@@ -9,9 +9,8 @@ import {
   Sparkles,
   ChevronLeft,
   ChevronRight,
-  MessageSquare,
   X,
-  Minus
+  GripHorizontal
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -42,12 +41,18 @@ interface AppLayoutProps {
   aiPanel?: React.ReactNode;
 }
 
+const MIN_PANEL_HEIGHT = 150;
+const MAX_PANEL_HEIGHT_RATIO = 0.85;
+
 const AppLayout = ({ children, showAiPanel = false, aiPanel }: AppLayoutProps) => {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [showMobileAi, setShowMobileAi] = useState(false);
-  const [mobileAiExpanded, setMobileAiExpanded] = useState(false);
+  const [panelHeight, setPanelHeight] = useState(window.innerHeight * 0.5);
+  const isDragging = useRef(false);
+  const startY = useRef(0);
+  const startHeight = useRef(0);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -59,6 +64,49 @@ const AppLayout = ({ children, showAiPanel = false, aiPanel }: AppLayoutProps) =
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  const handleDragStart = useCallback((clientY: number) => {
+    isDragging.current = true;
+    startY.current = clientY;
+    startHeight.current = panelHeight;
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'ns-resize';
+  }, [panelHeight]);
+
+  const handleDragMove = useCallback((clientY: number) => {
+    if (!isDragging.current) return;
+    const delta = startY.current - clientY;
+    const newHeight = Math.min(
+      Math.max(startHeight.current + delta, MIN_PANEL_HEIGHT),
+      window.innerHeight * MAX_PANEL_HEIGHT_RATIO
+    );
+    setPanelHeight(newHeight);
+  }, []);
+
+  const handleDragEnd = useCallback(() => {
+    isDragging.current = false;
+    document.body.style.userSelect = '';
+    document.body.style.cursor = '';
+  }, []);
+
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => handleDragMove(e.clientY);
+    const onMouseUp = () => handleDragEnd();
+    const onTouchMove = (e: TouchEvent) => handleDragMove(e.touches[0].clientY);
+    const onTouchEnd = () => handleDragEnd();
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    window.addEventListener('touchmove', onTouchMove);
+    window.addEventListener('touchend', onTouchEnd);
+
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+      window.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('touchend', onTouchEnd);
+    };
+  }, [handleDragMove, handleDragEnd]);
 
   return (
     <div className="h-screen bg-background text-foreground font-sans flex overflow-hidden">
@@ -157,7 +205,7 @@ const AppLayout = ({ children, showAiPanel = false, aiPanel }: AppLayoutProps) =
               <button
                 onClick={() => {
                   setShowMobileAi(true);
-                  setMobileAiExpanded(false);
+                  setPanelHeight(window.innerHeight * 0.5);
                 }}
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-xs font-medium"
               >
@@ -173,8 +221,10 @@ const AppLayout = ({ children, showAiPanel = false, aiPanel }: AppLayoutProps) =
           {/* Main Content */}
           <main className={cn(
             "flex-1 overflow-y-auto transition-all duration-300",
-            showAiPanel && isMobile && showMobileAi && !mobileAiExpanded ? "pb-[50vh]" : ""
-          )}>
+            showAiPanel && isMobile && showMobileAi ? `pb-[${panelHeight}px]` : ""
+          )}
+          style={showAiPanel && isMobile && showMobileAi ? { paddingBottom: panelHeight } : undefined}
+          >
             {children}
           </main>
 
@@ -187,35 +237,37 @@ const AppLayout = ({ children, showAiPanel = false, aiPanel }: AppLayoutProps) =
         </div>
       </div>
 
-      {/* Mobile AI Panel - Half Screen Bottom Sheet */}
+      {/* Mobile AI Panel - Resizable Bottom Sheet */}
       {showAiPanel && isMobile && showMobileAi && (
         <div 
-          className={cn(
-            "fixed left-0 right-0 bg-card border-t border-border z-50 transition-all duration-300 flex flex-col",
-            mobileAiExpanded ? "inset-0" : "bottom-0 h-[50vh]"
-          )}
+          className="fixed left-0 right-0 bottom-0 bg-card border-t border-border z-50 flex flex-col"
+          style={{ height: panelHeight }}
         >
-          {/* Handle Bar */}
+          {/* Drag Handle */}
+          <div 
+            className="h-8 border-b border-border flex items-center justify-center cursor-ns-resize touch-none select-none shrink-0 hover:bg-muted/30 transition-colors"
+            onMouseDown={(e) => handleDragStart(e.clientY)}
+            onTouchStart={(e) => handleDragStart(e.touches[0].clientY)}
+          >
+            <div className="flex flex-col items-center gap-0.5">
+              <GripHorizontal size={16} className="text-muted-foreground" />
+            </div>
+          </div>
+          
+          {/* Header */}
           <div className="h-10 border-b border-border flex items-center justify-between px-4 shrink-0">
             <div className="flex items-center gap-2">
               <Sparkles size={14} className="text-primary" />
               <span className="text-sm font-medium">Alpha Agent</span>
             </div>
-            <div className="flex items-center gap-1">
-              <button 
-                onClick={() => setMobileAiExpanded(!mobileAiExpanded)}
-                className="p-1.5 text-muted-foreground hover:text-foreground rounded"
-              >
-                {mobileAiExpanded ? <Minus size={16} /> : <ChevronLeft size={16} className="rotate-90" />}
-              </button>
-              <button 
-                onClick={() => setShowMobileAi(false)}
-                className="p-1.5 text-muted-foreground hover:text-foreground rounded"
-              >
-                <X size={16} />
-              </button>
-            </div>
+            <button 
+              onClick={() => setShowMobileAi(false)}
+              className="p-1.5 text-muted-foreground hover:text-foreground rounded"
+            >
+              <X size={16} />
+            </button>
           </div>
+          
           <div className="flex-1 overflow-hidden">
             {isValidElement(aiPanel) 
               ? cloneElement(aiPanel as React.ReactElement<{ hideHeader?: boolean }>, { hideHeader: true })
