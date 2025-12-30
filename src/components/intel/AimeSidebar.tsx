@@ -14,6 +14,7 @@ interface Message {
 
 interface AimeSidebarProps {
   onUpdate: (data: InsightData) => void;
+  hideHeader?: boolean;
 }
 
 const quickQuestions = [
@@ -27,7 +28,7 @@ const quickQuestions = [
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/onchain-chat`;
 
-const AimeSidebar = ({ onUpdate }: AimeSidebarProps) => {
+const AimeSidebar = ({ onUpdate, hideHeader = false }: AimeSidebarProps) => {
   const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -250,24 +251,26 @@ const AimeSidebar = ({ onUpdate }: AimeSidebarProps) => {
 
   return (
     <div className="h-full flex flex-col bg-card">
-      {/* Header */}
-      <div className="p-4 border-b border-border shrink-0">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
-              <Sparkles size={16} className="text-primary" />
+      {/* Header - hidden on mobile when used in bottom sheet */}
+      {!hideHeader && (
+        <div className="p-4 border-b border-border shrink-0">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+                <Sparkles size={16} className="text-primary" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold">Alpha Agent</h3>
+                <p className="text-[10px] text-muted-foreground">On-chain Intelligence</p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-sm font-bold">Alpha Agent</h3>
-              <p className="text-[10px] text-muted-foreground">On-chain Intelligence</p>
+            <div className="flex items-center gap-1">
+              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+              <span className="text-xs text-green-500">Live</span>
             </div>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            <span className="text-xs text-green-500">Live</span>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Messages */}
       <ScrollArea className="flex-1 p-4">
