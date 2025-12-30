@@ -10,7 +10,8 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
-  GripHorizontal
+  GripHorizontal,
+  GripVertical
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -43,6 +44,9 @@ interface AppLayoutProps {
 
 const MIN_PANEL_HEIGHT = 150;
 const MAX_PANEL_HEIGHT_RATIO = 0.85;
+const MIN_PANEL_WIDTH = 280;
+const MAX_PANEL_WIDTH = 600;
+const DEFAULT_PANEL_WIDTH = 340;
 
 const AppLayout = ({ children, showAiPanel = false, aiPanel }: AppLayoutProps) => {
   const location = useLocation();
@@ -50,9 +54,17 @@ const AppLayout = ({ children, showAiPanel = false, aiPanel }: AppLayoutProps) =
   const [isMobile, setIsMobile] = useState(false);
   const [showMobileAi, setShowMobileAi] = useState(false);
   const [panelHeight, setPanelHeight] = useState(window.innerHeight * 0.5);
-  const isDragging = useRef(false);
+  const [panelWidth, setPanelWidth] = useState(DEFAULT_PANEL_WIDTH);
+  
+  // Mobile vertical drag refs
+  const isDraggingY = useRef(false);
   const startY = useRef(0);
   const startHeight = useRef(0);
+  
+  // Desktop horizontal drag refs
+  const isDraggingX = useRef(false);
+  const startX = useRef(0);
+  const startWidth = useRef(0);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -65,16 +77,17 @@ const AppLayout = ({ children, showAiPanel = false, aiPanel }: AppLayoutProps) =
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  const handleDragStart = useCallback((clientY: number) => {
-    isDragging.current = true;
+  // Mobile vertical drag handlers
+  const handleDragStartY = useCallback((clientY: number) => {
+    isDraggingY.current = true;
     startY.current = clientY;
     startHeight.current = panelHeight;
     document.body.style.userSelect = 'none';
     document.body.style.cursor = 'ns-resize';
   }, [panelHeight]);
 
-  const handleDragMove = useCallback((clientY: number) => {
-    if (!isDragging.current) return;
+  const handleDragMoveY = useCallback((clientY: number) => {
+    if (!isDraggingY.current) return;
     const delta = startY.current - clientY;
     const newHeight = Math.min(
       Math.max(startHeight.current + delta, MIN_PANEL_HEIGHT),
@@ -83,17 +96,54 @@ const AppLayout = ({ children, showAiPanel = false, aiPanel }: AppLayoutProps) =
     setPanelHeight(newHeight);
   }, []);
 
-  const handleDragEnd = useCallback(() => {
-    isDragging.current = false;
+  const handleDragEndY = useCallback(() => {
+    isDraggingY.current = false;
+    document.body.style.userSelect = '';
+    document.body.style.cursor = '';
+  }, []);
+
+  // Desktop horizontal drag handlers
+  const handleDragStartX = useCallback((clientX: number) => {
+    isDraggingX.current = true;
+    startX.current = clientX;
+    startWidth.current = panelWidth;
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'ew-resize';
+  }, [panelWidth]);
+
+  const handleDragMoveX = useCallback((clientX: number) => {
+    if (!isDraggingX.current) return;
+    const delta = startX.current - clientX;
+    const newWidth = Math.min(
+      Math.max(startWidth.current + delta, MIN_PANEL_WIDTH),
+      MAX_PANEL_WIDTH
+    );
+    setPanelWidth(newWidth);
+  }, []);
+
+  const handleDragEndX = useCallback(() => {
+    isDraggingX.current = false;
     document.body.style.userSelect = '';
     document.body.style.cursor = '';
   }, []);
 
   useEffect(() => {
-    const onMouseMove = (e: MouseEvent) => handleDragMove(e.clientY);
-    const onMouseUp = () => handleDragEnd();
-    const onTouchMove = (e: TouchEvent) => handleDragMove(e.touches[0].clientY);
-    const onTouchEnd = () => handleDragEnd();
+    const onMouseMove = (e: MouseEvent) => {
+      handleDragMoveY(e.clientY);
+      handleDragMoveX(e.clientX);
+    };
+    const onMouseUp = () => {
+      handleDragEndY();
+      handleDragEndX();
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      handleDragMoveY(e.touches[0].clientY);
+      handleDragMoveX(e.touches[0].clientX);
+    };
+    const onTouchEnd = () => {
+      handleDragEndY();
+      handleDragEndX();
+    };
 
     window.addEventListener('mousemove', onMouseMove);
     window.addEventListener('mouseup', onMouseUp);
@@ -106,7 +156,7 @@ const AppLayout = ({ children, showAiPanel = false, aiPanel }: AppLayoutProps) =
       window.removeEventListener('touchmove', onTouchMove);
       window.removeEventListener('touchend', onTouchEnd);
     };
-  }, [handleDragMove, handleDragEnd]);
+  }, [handleDragMoveY, handleDragEndY, handleDragMoveX, handleDragEndX]);
 
   return (
     <div className="h-screen bg-background text-foreground font-sans flex overflow-hidden">
@@ -228,11 +278,25 @@ const AppLayout = ({ children, showAiPanel = false, aiPanel }: AppLayoutProps) =
             {children}
           </main>
 
-          {/* AI Panel (Desktop) */}
+          {/* AI Panel (Desktop) - Resizable */}
           {showAiPanel && !isMobile && aiPanel && (
-            <aside className="w-80 border-l border-border bg-card shrink-0 flex flex-col overflow-hidden">
-              {aiPanel}
-            </aside>
+            <>
+              {/* Drag Handle */}
+              <div
+                className="w-1 hover:w-1.5 bg-border hover:bg-primary/50 cursor-ew-resize transition-all shrink-0 group flex items-center justify-center"
+                onMouseDown={(e) => handleDragStartX(e.clientX)}
+              >
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                  <GripVertical size={10} className="text-primary" />
+                </div>
+              </div>
+              <aside 
+                className="border-l border-border bg-card shrink-0 flex flex-col overflow-hidden"
+                style={{ width: panelWidth }}
+              >
+                {aiPanel}
+              </aside>
+            </>
           )}
         </div>
       </div>
@@ -245,13 +309,11 @@ const AppLayout = ({ children, showAiPanel = false, aiPanel }: AppLayoutProps) =
         >
           {/* Drag Handle */}
           <div 
-            className="h-8 border-b border-border flex items-center justify-center cursor-ns-resize touch-none select-none shrink-0 hover:bg-muted/30 transition-colors"
-            onMouseDown={(e) => handleDragStart(e.clientY)}
-            onTouchStart={(e) => handleDragStart(e.touches[0].clientY)}
+            className="h-6 border-b border-border flex items-center justify-center cursor-ns-resize touch-none select-none shrink-0 hover:bg-muted/30 transition-colors"
+            onMouseDown={(e) => handleDragStartY(e.clientY)}
+            onTouchStart={(e) => handleDragStartY(e.touches[0].clientY)}
           >
-            <div className="flex flex-col items-center gap-0.5">
-              <GripHorizontal size={16} className="text-muted-foreground" />
-            </div>
+            <GripHorizontal size={14} className="text-muted-foreground" />
           </div>
           
           {/* Header */}

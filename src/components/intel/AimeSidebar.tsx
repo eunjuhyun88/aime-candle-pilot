@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { InsightData } from '@/pages/Intel';
-import { Send, Sparkles, Bot, User, Wallet, Coins, Activity, Zap, TrendingUp, AlertCircle } from 'lucide-react';
+import { Send, Sparkles, Bot, User } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import OnchainMetrics from './OnchainMetrics';
 
 interface Message {
   id: string;
@@ -18,12 +19,12 @@ interface AimeSidebarProps {
 }
 
 const quickQuestions = [
-  { label: "🐋 고래 지갑 추적", query: "현재 BTC, ETH 고래 지갑들의 움직임을 분석해줘. 최근 24시간 큰 거래 내역과 스마트머니 동향 알려줘." },
-  { label: "📊 SOL 온체인", query: "솔라나 온체인 데이터 분석해줘. 활성 지갑 수, TPS, TVL 변화, 주요 DEX 거래량 추이를 알려줘." },
-  { label: "💰 ETH 흐름", query: "이더리움 거래소 입출금 흐름 분석해줘. 스마트머니가 축적하는지 청산하는지 판단해줘." },
-  { label: "🔥 DeFi TVL", query: "현재 주요 DeFi 프로토콜들의 TVL 순위와 변동을 분석하고, 자금 흐름에서 트렌드를 찾아줘." },
-  { label: "⛽ Gas 트렌드", query: "이더리움과 L2들의 가스비 트렌드 분석하고, 네트워크 혼잡도 기준으로 최적 거래 시간대 추천해줘." },
-  { label: "🎯 토큰 분석", query: "요즘 뜨는 알트코인 중 온체인 데이터가 좋은 종목 3개 추천하고, 홀더 분포와 거래량 분석해줘." },
+  { label: "🐋 고래", query: "현재 BTC, ETH 고래 지갑들의 움직임을 분석해줘." },
+  { label: "📊 SOL", query: "솔라나 온체인 데이터 분석해줘." },
+  { label: "💰 ETH", query: "이더리움 거래소 입출금 흐름 분석해줘." },
+  { label: "🔥 DeFi", query: "주요 DeFi TVL 순위와 변동 분석해줘." },
+  { label: "⛽ Gas", query: "가스비 트렌드와 최적 거래 시간대 추천해줘." },
+  { label: "🎯 Hot", query: "온체인 데이터가 좋은 알트코인 추천해줘." },
 ];
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/onchain-chat`;
@@ -253,27 +254,30 @@ const AimeSidebar = ({ onUpdate, hideHeader = false }: AimeSidebarProps) => {
     <div className="h-full flex flex-col bg-card">
       {/* Header - hidden on mobile when used in bottom sheet */}
       {!hideHeader && (
-        <div className="p-4 border-b border-border shrink-0">
+        <div className="p-3 border-b border-border shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
-                <Sparkles size={16} className="text-primary" />
+              <div className="w-7 h-7 rounded-lg bg-primary/20 flex items-center justify-center">
+                <Sparkles size={14} className="text-primary" />
               </div>
               <div>
                 <h3 className="text-sm font-bold">Alpha Agent</h3>
-                <p className="text-[10px] text-muted-foreground">On-chain Intelligence</p>
+                <p className="text-[10px] text-muted-foreground">On-chain AI</p>
               </div>
             </div>
             <div className="flex items-center gap-1">
-              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-xs text-green-500">Live</span>
+              <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+              <span className="text-[10px] text-green-500">Live</span>
             </div>
           </div>
         </div>
       )}
 
+      {/* On-chain Metrics Dashboard */}
+      {!hideHeader && <OnchainMetrics />}
+
       {/* Messages */}
-      <ScrollArea className="flex-1 p-4">
+      <ScrollArea className="flex-1 p-3">
         <div ref={scrollRef} className="space-y-4">
           {messages.map((message) => (
             <div
