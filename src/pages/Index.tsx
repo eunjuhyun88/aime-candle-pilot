@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { Link } from 'react-router-dom';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
-import { Zap, MessageSquare, Activity, TrendingUp, Send, Newspaper } from 'lucide-react';
+import { Zap, MessageSquare, Activity, TrendingUp, Send } from 'lucide-react';
+import AppLayout from '@/components/layout/AppLayout';
 
 declare global {
   interface Window {
@@ -17,7 +17,7 @@ interface ContextData {
   news: string;
 }
 
-const StockHooTerminal = () => {
+const TradingTerminal = () => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const [selectedSymbol, setSelectedSymbol] = useState('BINANCE:BTCUSDT');
   
@@ -45,7 +45,6 @@ const StockHooTerminal = () => {
     const container = chartContainerRef.current;
     if (!container) return;
 
-    // 기존 위젯 제거
     container.innerHTML = '';
 
     const script = document.createElement('script');
@@ -97,70 +96,101 @@ const StockHooTerminal = () => {
     setInputValue("");
   };
 
-  return (
-    <div className="h-screen bg-background text-foreground font-sans flex flex-col overflow-hidden">
-      {/* Header with Navigation */}
-      <header className="h-12 border-b border-border bg-card flex items-center px-4 justify-between shrink-0">
-        <div className="flex items-center gap-4">
+  const AiPanel = (
+    <div className="h-full flex flex-col">
+      <div className="p-4 border-b border-border">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
-              <TrendingUp size={16} className="text-primary-foreground" />
+            <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+              <MessageSquare size={16} className="text-primary" />
             </div>
-            <span className="text-lg font-black tracking-tight">STOCKHOO</span>
+            <div>
+              <h3 className="text-sm font-bold text-primary">Aime Copilot</h3>
+              <p className="text-[10px] text-muted-foreground">Context-Aware AI</p>
+            </div>
           </div>
-          <div className="h-6 w-px bg-border" />
-          <nav className="flex items-center gap-1">
-            <span className="px-3 py-1.5 text-xs font-medium text-foreground bg-primary/10 rounded">
-              Trading
-            </span>
-            <Link 
-              to="/intel" 
-              className="px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded transition-colors flex items-center gap-1.5"
-            >
-              <Newspaper size={12} />
-              Intel
-            </Link>
-          </nav>
-          <div className="h-6 w-px bg-border" />
-          <div className="flex items-center gap-2">
-            <span className="font-bold">BTC/USDT</span>
-            <span className="text-green-500 font-bold">$64,250.50</span>
-            <span className="text-xs text-green-500 bg-green-500/10 px-2 py-0.5 rounded">+2.4%</span>
-          </div>
+          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
         </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            <span>Live</span>
-          </div>
-        </div>
-      </header>
+      </div>
 
-      {/* Resizable 3-Panel Layout */}
-      <ResizablePanelGroup direction="horizontal" className="flex-1">
-        {/* LEFT: Intelligence Feed */}
-        <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
-          <div className="h-full bg-card border-r border-border flex flex-col">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="bg-muted/30 p-4 rounded-2xl rounded-tl-none border border-border text-sm leading-relaxed whitespace-pre-line">
+          {aiMessage}
+        </div>
+
+        {activeContext && (
+          <div className="bg-primary/5 border border-primary/20 p-4 rounded-xl animate-fade-in">
+            <div className="flex items-center gap-2 mb-3">
+              <TrendingUp size={14} className="text-green-500" />
+              <span className="text-xs font-bold text-primary uppercase">AI 추천 전략</span>
+            </div>
+            <div className="grid grid-cols-3 gap-2 text-center text-xs mb-3">
+              <div className="bg-muted/30 rounded-lg p-2">
+                <p className="text-muted-foreground text-[10px]">Entry</p>
+                <p className="font-mono font-bold">${activeContext.price.toLocaleString()}</p>
+              </div>
+              <div className="bg-green-500/10 rounded-lg p-2">
+                <p className="text-green-500 text-[10px]">Target</p>
+                <p className="font-mono font-bold text-green-500">$65,800</p>
+              </div>
+              <div className="bg-red-500/10 rounded-lg p-2">
+                <p className="text-red-500 text-[10px]">Stop</p>
+                <p className="font-mono font-bold text-red-500">$62,000</p>
+              </div>
+            </div>
+            <button className="w-full py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-bold rounded-lg transition-all">
+              전략 적용하기
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className="p-4 border-t border-border">
+        <div className="relative">
+          <input
+            type="text"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+            placeholder="차트에 대해 질문하세요..."
+            className="w-full bg-muted/30 border border-border rounded-xl px-4 py-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-all pr-12"
+          />
+          <button 
+            onClick={handleSendMessage}
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-primary hover:bg-primary/10 rounded-lg transition-colors"
+          >
+            <Send size={16} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <AppLayout showAiPanel aiPanel={AiPanel}>
+      <ResizablePanelGroup direction="horizontal" className="h-full">
+        {/* LEFT: Alpha Signals */}
+        <ResizablePanel defaultSize={22} minSize={15} maxSize={30}>
+          <div className="h-full bg-card/50 border-r border-border flex flex-col">
             <div className="p-4 border-b border-border">
               <div className="flex items-center gap-2">
-                <Zap size={14} className="text-signal-green" />
+                <Zap size={14} className="text-green-500" />
                 <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Alpha Signals</h3>
               </div>
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
-              {/* Signal Cards */}
               {[
                 { type: 'bullish', title: 'Whale Accumulation', conf: 89, entry: '63,250', target: '65,800' },
                 { type: 'bullish', title: 'GEX Flip Positive', conf: 76, entry: '63,500', target: '66,000' },
               ].map((signal, i) => (
                 <div 
                   key={i}
-                  className="terminal-card p-3 rounded-lg border border-primary/20 hover:border-primary/50 transition-all cursor-pointer"
+                  className="bg-card p-3 rounded-lg border border-primary/20 hover:border-primary/50 transition-all cursor-pointer"
                   onClick={() => syncAllPanels(parseFloat(signal.entry.replace(',', '')), 'now')}
                 >
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-[10px] font-bold text-signal-green">▲ BULLISH</span>
+                    <span className="text-[10px] font-bold text-green-500">▲ BULLISH</span>
                     <span className="text-[10px] text-muted-foreground">{signal.conf}%</span>
                   </div>
                   <h4 className="text-sm font-bold mb-2">{signal.title}</h4>
@@ -169,15 +199,14 @@ const StockHooTerminal = () => {
                       <p className="text-muted-foreground">Entry</p>
                       <p className="font-mono font-bold">{signal.entry}</p>
                     </div>
-                    <div className="bg-signal-green/10 rounded p-1.5 text-center">
-                      <p className="text-signal-green">Target</p>
-                      <p className="font-mono font-bold text-signal-green">{signal.target}</p>
+                    <div className="bg-green-500/10 rounded p-1.5 text-center">
+                      <p className="text-green-500">Target</p>
+                      <p className="font-mono font-bold text-green-500">{signal.target}</p>
                     </div>
                   </div>
                 </div>
               ))}
 
-              {/* Context Sync Indicator */}
               {activeContext && (
                 <div className="mt-4 p-3 bg-primary/5 border border-primary/20 rounded-lg animate-fade-in">
                   <p className="text-[10px] text-primary font-bold mb-1">SYNCED CONTEXT</p>
@@ -191,13 +220,11 @@ const StockHooTerminal = () => {
 
         <ResizableHandle withHandle />
 
-        {/* CENTER: Chart */}
-        <ResizablePanel defaultSize={55} minSize={40}>
+        {/* CENTER: Chart + Context Dashboard */}
+        <ResizablePanel defaultSize={78} minSize={50}>
           <ResizablePanelGroup direction="vertical">
-            {/* Chart Area */}
             <ResizablePanel defaultSize={70} minSize={50}>
               <div className="h-full bg-[#0B0E11] relative flex flex-col">
-                {/* Chart Toolbar */}
                 <div className="h-10 border-b border-border bg-card/50 flex items-center px-3 gap-2 shrink-0">
                   <select
                     value={selectedSymbol}
@@ -231,7 +258,6 @@ const StockHooTerminal = () => {
                   </div>
                 </div>
                 
-                {/* TradingView Widget Container */}
                 <div 
                   id="tradingview_chart" 
                   ref={chartContainerRef} 
@@ -242,8 +268,7 @@ const StockHooTerminal = () => {
 
             <ResizableHandle withHandle />
 
-            {/* Bottom: Context Dashboard */}
-            <ResizablePanel defaultSize={30} minSize={20} maxSize={45}>
+            <ResizablePanel defaultSize={30} minSize={15} maxSize={45}>
               <div className="h-full bg-card border-t border-border flex flex-col">
                 <div className="flex items-center gap-4 px-4 py-2 border-b border-border">
                   {['Activities', 'Vibes', 'News'].map((tab, i) => (
@@ -266,7 +291,7 @@ const StockHooTerminal = () => {
                 <div className="flex-1 overflow-y-auto p-4 font-mono text-xs space-y-2">
                   {activeContext ? (
                     <>
-                      <div className="flex items-center gap-2 text-signal-green">
+                      <div className="flex items-center gap-2 text-green-500">
                         <Activity size={12} />
                         <span>[WHALE] {activeContext.whaleFlow} @ ${activeContext.price.toLocaleString()}</span>
                       </div>
@@ -289,85 +314,9 @@ const StockHooTerminal = () => {
             </ResizablePanel>
           </ResizablePanelGroup>
         </ResizablePanel>
-
-        <ResizableHandle withHandle />
-
-        {/* RIGHT: AI Copilot */}
-        <ResizablePanel defaultSize={25} minSize={20} maxSize={35}>
-          <div className="h-full bg-card border-l border-border flex flex-col">
-            <div className="p-4 border-b border-border">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
-                    <MessageSquare size={16} className="text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-primary">Aime Copilot</h3>
-                    <p className="text-[10px] text-muted-foreground">Context-Aware AI</p>
-                  </div>
-                </div>
-                <div className="w-2 h-2 rounded-full bg-signal-green animate-pulse" />
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {/* AI Response */}
-              <div className="bg-muted/30 p-4 rounded-2xl rounded-tl-none border border-border text-sm leading-relaxed whitespace-pre-line">
-                {aiMessage}
-              </div>
-
-              {/* Strategy Card when context is active */}
-              {activeContext && (
-                <div className="bg-primary/5 border border-primary/20 p-4 rounded-xl animate-fade-in">
-                  <div className="flex items-center gap-2 mb-3">
-                    <TrendingUp size={14} className="text-signal-green" />
-                    <span className="text-xs font-bold text-primary uppercase">AI 추천 전략</span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 text-center text-xs mb-3">
-                    <div className="bg-muted/30 rounded-lg p-2">
-                      <p className="text-muted-foreground text-[10px]">Entry</p>
-                      <p className="font-mono font-bold">${activeContext.price.toLocaleString()}</p>
-                    </div>
-                    <div className="bg-signal-green/10 rounded-lg p-2">
-                      <p className="text-signal-green text-[10px]">Target</p>
-                      <p className="font-mono font-bold text-signal-green">$65,800</p>
-                    </div>
-                    <div className="bg-signal-red/10 rounded-lg p-2">
-                      <p className="text-signal-red text-[10px]">Stop</p>
-                      <p className="font-mono font-bold text-signal-red">$62,000</p>
-                    </div>
-                  </div>
-                  <button className="w-full py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-bold rounded-lg transition-all">
-                    전략 적용하기
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Chat Input */}
-            <div className="p-4 border-t border-border">
-              <div className="relative">
-                <input
-                  type="text"
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                  placeholder="차트에 대해 질문하세요..."
-                  className="w-full bg-muted/30 border border-border rounded-xl px-4 py-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-all pr-12"
-                />
-                <button 
-                  onClick={handleSendMessage}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-primary hover:bg-primary/10 rounded-lg transition-colors"
-                >
-                  <Send size={16} />
-                </button>
-              </div>
-            </div>
-          </div>
-        </ResizablePanel>
       </ResizablePanelGroup>
-    </div>
+    </AppLayout>
   );
 };
 
-export default StockHooTerminal;
+export default TradingTerminal;
