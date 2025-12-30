@@ -14,7 +14,198 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          id: string
+          nickname: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          id: string
+          nickname?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          nickname?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      trading_profiles: {
+        Row: {
+          absolute_min_rr: number | null
+          alert_priorities: Json | null
+          created_at: string | null
+          custom_rules: Json | null
+          daily_loss_limit: number | null
+          dominance_importance: string | null
+          entry_timeframe: string | null
+          excluded_assets: Json | null
+          excluded_hours: string | null
+          experience_level: string | null
+          fixed_stop_percent: number | null
+          futures_indicators_importance: string | null
+          hard_rules: Json | null
+          id: string
+          ideal_risk_reward: number | null
+          improvement_goals: Json | null
+          language: string | null
+          leverage_preference: string | null
+          loss_experiences: Json | null
+          main_analysis_timeframe: string | null
+          max_positions: number | null
+          max_risk_per_trade: number | null
+          min_risk_reward: number | null
+          monthly_goal: number | null
+          ob_1touch_confidence: string | null
+          ob_2touch_confidence: string | null
+          ob_3touch_confidence: string | null
+          onboarding_completed: boolean | null
+          onchain_importance: string | null
+          preferred_direction: string | null
+          primary_assets: Json | null
+          response_length: string | null
+          rsi_force_exit: number | null
+          rsi_no_entry_above: number | null
+          rsi_oversold_interest: number | null
+          rsi_take_profit_start: number | null
+          stop_loss_type: string | null
+          success_experiences: Json | null
+          timezone: string | null
+          trader_nickname: string | null
+          trader_type: string | null
+          trading_hours_end: string | null
+          trading_hours_start: string | null
+          trading_style: string | null
+          updated_at: string | null
+          use_emojis: boolean | null
+          use_harmonics: boolean | null
+          user_id: string
+          warning_intensity: string | null
+          watchlist_assets: Json | null
+          weaknesses: Json | null
+          weekend_trading: boolean | null
+          yearly_goal: number | null
+        }
+        Insert: {
+          absolute_min_rr?: number | null
+          alert_priorities?: Json | null
+          created_at?: string | null
+          custom_rules?: Json | null
+          daily_loss_limit?: number | null
+          dominance_importance?: string | null
+          entry_timeframe?: string | null
+          excluded_assets?: Json | null
+          excluded_hours?: string | null
+          experience_level?: string | null
+          fixed_stop_percent?: number | null
+          futures_indicators_importance?: string | null
+          hard_rules?: Json | null
+          id?: string
+          ideal_risk_reward?: number | null
+          improvement_goals?: Json | null
+          language?: string | null
+          leverage_preference?: string | null
+          loss_experiences?: Json | null
+          main_analysis_timeframe?: string | null
+          max_positions?: number | null
+          max_risk_per_trade?: number | null
+          min_risk_reward?: number | null
+          monthly_goal?: number | null
+          ob_1touch_confidence?: string | null
+          ob_2touch_confidence?: string | null
+          ob_3touch_confidence?: string | null
+          onboarding_completed?: boolean | null
+          onchain_importance?: string | null
+          preferred_direction?: string | null
+          primary_assets?: Json | null
+          response_length?: string | null
+          rsi_force_exit?: number | null
+          rsi_no_entry_above?: number | null
+          rsi_oversold_interest?: number | null
+          rsi_take_profit_start?: number | null
+          stop_loss_type?: string | null
+          success_experiences?: Json | null
+          timezone?: string | null
+          trader_nickname?: string | null
+          trader_type?: string | null
+          trading_hours_end?: string | null
+          trading_hours_start?: string | null
+          trading_style?: string | null
+          updated_at?: string | null
+          use_emojis?: boolean | null
+          use_harmonics?: boolean | null
+          user_id: string
+          warning_intensity?: string | null
+          watchlist_assets?: Json | null
+          weaknesses?: Json | null
+          weekend_trading?: boolean | null
+          yearly_goal?: number | null
+        }
+        Update: {
+          absolute_min_rr?: number | null
+          alert_priorities?: Json | null
+          created_at?: string | null
+          custom_rules?: Json | null
+          daily_loss_limit?: number | null
+          dominance_importance?: string | null
+          entry_timeframe?: string | null
+          excluded_assets?: Json | null
+          excluded_hours?: string | null
+          experience_level?: string | null
+          fixed_stop_percent?: number | null
+          futures_indicators_importance?: string | null
+          hard_rules?: Json | null
+          id?: string
+          ideal_risk_reward?: number | null
+          improvement_goals?: Json | null
+          language?: string | null
+          leverage_preference?: string | null
+          loss_experiences?: Json | null
+          main_analysis_timeframe?: string | null
+          max_positions?: number | null
+          max_risk_per_trade?: number | null
+          min_risk_reward?: number | null
+          monthly_goal?: number | null
+          ob_1touch_confidence?: string | null
+          ob_2touch_confidence?: string | null
+          ob_3touch_confidence?: string | null
+          onboarding_completed?: boolean | null
+          onchain_importance?: string | null
+          preferred_direction?: string | null
+          primary_assets?: Json | null
+          response_length?: string | null
+          rsi_force_exit?: number | null
+          rsi_no_entry_above?: number | null
+          rsi_oversold_interest?: number | null
+          rsi_take_profit_start?: number | null
+          stop_loss_type?: string | null
+          success_experiences?: Json | null
+          timezone?: string | null
+          trader_nickname?: string | null
+          trader_type?: string | null
+          trading_hours_end?: string | null
+          trading_hours_start?: string | null
+          trading_style?: string | null
+          updated_at?: string | null
+          use_emojis?: boolean | null
+          use_harmonics?: boolean | null
+          user_id?: string
+          warning_intensity?: string | null
+          watchlist_assets?: Json | null
+          weaknesses?: Json | null
+          weekend_trading?: boolean | null
+          yearly_goal?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
