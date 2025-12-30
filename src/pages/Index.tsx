@@ -1,8 +1,12 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { createChart, ColorType, CandlestickSeries } from 'lightweight-charts';
-import type { IChartApi } from 'lightweight-charts';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
-import { Zap, MessageSquare, Activity, MousePointer2, TrendingUp, Send } from 'lucide-react';
+import { Zap, MessageSquare, Activity, TrendingUp, Send } from 'lucide-react';
+
+declare global {
+  interface Window {
+    TradingView: any;
+  }
+}
 
 interface ContextData {
   price: number;
@@ -14,7 +18,7 @@ interface ContextData {
 
 const StockHooTerminal = () => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<IChartApi | null>(null);
+  const [selectedSymbol, setSelectedSymbol] = useState('BINANCE:BTCUSDT');
   
   // Candle-Centric Context State
   const [activeContext, setActiveContext] = useState<ContextData | null>(null);
@@ -35,117 +39,56 @@ const StockHooTerminal = () => {
     setAiMessage(`$${price.toLocaleString()} 구간 분석 완료:\n\n• 고래 지갑 동향: ${contextData.whaleFlow}\n• 소셜 센티먼트: ${contextData.sentiment}\n• 관련 뉴스: ${contextData.news}\n\n이 레벨은 스마트머니의 방어 구간입니다. 롱 포지션 진입 시 손익비 1:2.4로 유리합니다.`);
   }, []);
 
-  // Chart initialization with Whale Heat Zone
+  // TradingView Widget 로드
   useEffect(() => {
-    if (!chartContainerRef.current) return;
+    const container = chartContainerRef.current;
+    if (!container) return;
 
-    const chart = createChart(chartContainerRef.current, {
-      layout: {
-        background: { type: ColorType.Solid, color: 'transparent' },
-        textColor: '#8B949E',
-      },
-      grid: {
-        vertLines: { color: 'rgba(48, 54, 61, 0.3)' },
-        horzLines: { color: 'rgba(48, 54, 61, 0.3)' },
-      },
-      width: chartContainerRef.current.clientWidth,
-      height: chartContainerRef.current.clientHeight,
-      timeScale: { borderVisible: false, timeVisible: true, secondsVisible: false },
-      rightPriceScale: { borderVisible: false },
-      crosshair: {
-        vertLine: { color: 'rgba(168, 85, 247, 0.5)', width: 1, style: 2 },
-        horzLine: { color: 'rgba(168, 85, 247, 0.5)', width: 1, style: 2 },
-      },
-    });
+    // 기존 위젯 제거
+    container.innerHTML = '';
 
-    const candlestickSeries = chart.addSeries(CandlestickSeries, {
-      upColor: '#22c55e',
-      downColor: '#ef4444',
-      borderVisible: false,
-      wickUpColor: '#22c55e',
-      wickDownColor: '#ef4444',
-    });
-
-    // Generate realistic mock data
-    const generateMockData = () => {
-      const data = [];
-      let basePrice = 63000;
-      const now = new Date();
-      for (let i = 80; i >= 0; i--) {
-        const date = new Date(now);
-        date.setHours(date.getHours() - i);
-        const dateStr = Math.floor(date.getTime() / 1000);
-        const volatility = Math.random() * 600 - 300;
-        const open = basePrice + volatility;
-        const close = open + (Math.random() * 400 - 200);
-        const high = Math.max(open, close) + Math.random() * 150;
-        const low = Math.min(open, close) - Math.random() * 150;
-        data.push({ time: dateStr, open, high, low, close });
-        basePrice = close;
-      }
-      return data;
-    };
-
-    candlestickSeries.setData(generateMockData());
-
-    // Whale Heat Zone - Price Lines
-    candlestickSeries.createPriceLine({
-      price: 63500,
-      color: 'rgba(168, 85, 247, 0.7)',
-      lineWidth: 2,
-      lineStyle: 0,
-      axisLabelVisible: true,
-      title: '🐋 Whale Defense Zone',
-    });
-
-    candlestickSeries.createPriceLine({
-      price: 65000,
-      color: 'rgba(34, 197, 94, 0.5)',
-      lineWidth: 1,
-      lineStyle: 2,
-      axisLabelVisible: true,
-      title: 'Target 1',
-    });
-
-    candlestickSeries.createPriceLine({
-      price: 62000,
-      color: 'rgba(239, 68, 68, 0.5)',
-      lineWidth: 1,
-      lineStyle: 2,
-      axisLabelVisible: true,
-      title: 'Stop Loss',
-    });
-
-    // Candle Click Handler - Sync all panels
-    chart.subscribeClick((param) => {
-      if (param.point) {
-        const price = candlestickSeries.coordinateToPrice(param.point.y);
-        if (price) {
-          const time = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
-          syncAllPanels(Number(price.toFixed(2)), time);
-        }
-      }
-    });
-
-    chartRef.current = chart;
-
-    const handleResize = () => {
-      if (chartContainerRef.current && chartRef.current) {
-        chartRef.current.applyOptions({
-          width: chartContainerRef.current.clientWidth,
-          height: chartContainerRef.current.clientHeight,
+    const script = document.createElement('script');
+    script.src = 'https://s3.tradingview.com/tv.js';
+    script.async = true;
+    script.onload = () => {
+      if (window.TradingView) {
+        new window.TradingView.widget({
+          container_id: container.id,
+          autosize: true,
+          symbol: selectedSymbol,
+          interval: '60',
+          timezone: 'Asia/Seoul',
+          theme: 'dark',
+          style: '1',
+          locale: 'ko',
+          toolbar_bg: '#161B22',
+          enable_publishing: false,
+          hide_top_toolbar: false,
+          hide_legend: false,
+          hide_side_toolbar: false,
+          allow_symbol_change: true,
+          save_image: false,
+          withdateranges: true,
+          details: true,
+          hotlist: true,
+          calendar: true,
+          studies: ['RSI@tv-basicstudies', 'MACD@tv-basicstudies', 'Volume@tv-basicstudies'],
+          show_popup_button: true,
+          popup_width: '1000',
+          popup_height: '650',
+          backgroundColor: '#0B0E11',
+          gridColor: '#161B22',
         });
       }
     };
-
-    const resizeObserver = new ResizeObserver(handleResize);
-    resizeObserver.observe(chartContainerRef.current);
+    document.head.appendChild(script);
 
     return () => {
-      resizeObserver.disconnect();
-      chart.remove();
+      if (script.parentNode) {
+        script.parentNode.removeChild(script);
+      }
     };
-  }, [syncAllPanels]);
+  }, [selectedSymbol]);
 
   const handleSendMessage = () => {
     if (!inputValue.trim()) return;
@@ -239,22 +182,47 @@ const StockHooTerminal = () => {
           <ResizablePanelGroup direction="vertical">
             {/* Chart Area */}
             <ResizablePanel defaultSize={70} minSize={50}>
-              <div className="h-full bg-background relative">
-                {/* Whale Heat Zone Overlay */}
-                <div className="absolute top-[35%] left-0 right-0 h-16 bg-primary/5 border-y border-primary/20 pointer-events-none z-10 flex items-center justify-end pr-4">
-                  <span className="text-[10px] text-primary/50 font-bold uppercase">Whale Defense Zone</span>
+              <div className="h-full bg-[#0B0E11] relative flex flex-col">
+                {/* Chart Toolbar */}
+                <div className="h-10 border-b border-border bg-card/50 flex items-center px-3 gap-2 shrink-0">
+                  <select
+                    value={selectedSymbol}
+                    onChange={(e) => setSelectedSymbol(e.target.value)}
+                    className="bg-muted/50 border border-border text-xs font-bold rounded px-2 py-1 outline-none focus:border-primary"
+                  >
+                    <option value="BINANCE:BTCUSDT">BTC/USDT</option>
+                    <option value="BINANCE:ETHUSDT">ETH/USDT</option>
+                    <option value="BINANCE:SOLUSDT">SOL/USDT</option>
+                    <option value="NASDAQ:AAPL">AAPL</option>
+                    <option value="NASDAQ:TSLA">TSLA</option>
+                  </select>
+                  <div className="h-4 w-px bg-border" />
+                  <div className="flex gap-1">
+                    {['1m', '5m', '15m', '1H', '4H', '1D'].map((tf) => (
+                      <button
+                        key={tf}
+                        className="px-2 py-1 text-[10px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded transition-colors"
+                      >
+                        {tf}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="ml-auto flex items-center gap-2">
+                    <button 
+                      onClick={() => syncAllPanels(64250, new Date().toLocaleTimeString())}
+                      className="px-3 py-1 text-[10px] font-bold bg-primary/20 text-primary hover:bg-primary/30 rounded transition-colors"
+                    >
+                      🐋 Whale Heat
+                    </button>
+                  </div>
                 </div>
                 
-                {/* Chart Container */}
-                <div ref={chartContainerRef} className="absolute inset-0" />
-                
-                {/* Click Hint */}
-                {!activeContext && (
-                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-card/80 backdrop-blur px-4 py-2 rounded-full border border-border text-xs text-muted-foreground flex items-center gap-2">
-                    <MousePointer2 size={14} />
-                    캔들을 클릭하여 시점별 분석 시작
-                  </div>
-                )}
+                {/* TradingView Widget Container */}
+                <div 
+                  id="tradingview_chart" 
+                  ref={chartContainerRef} 
+                  className="flex-1 w-full"
+                />
               </div>
             </ResizablePanel>
 
