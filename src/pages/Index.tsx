@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { MessageSquare, Activity, TrendingUp, Send, Zap } from 'lucide-react';
+import { Activity, TrendingUp, Zap, MessageSquare } from 'lucide-react';
 import AppLayout from '@/components/layout/AppLayout';
+import AimeSidebar from '@/components/intel/AimeSidebar';
+import { InsightData } from '@/pages/Intel';
 
 declare global {
   interface Window {
@@ -19,11 +21,10 @@ interface ContextData {
 const TradingTerminal = () => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const [selectedSymbol, setSelectedSymbol] = useState('BINANCE:BTCUSDT');
+  const [insightData, setInsightData] = useState<InsightData | null>(null);
   
   // Candle-Centric Context State
   const [activeContext, setActiveContext] = useState<ContextData | null>(null);
-  const [aiMessage, setAiMessage] = useState("차트에서 궁금한 캔들을 클릭하거나 드로잉을 하면, 해당 시점의 스마트머니 흐름을 즉시 분석해 드립니다.");
-  const [inputValue, setInputValue] = useState("");
 
   // Candle-Snap Intelligence: 클릭 시 전체 패널 동기화
   const syncAllPanels = useCallback((price: number, time: string) => {
@@ -36,8 +37,11 @@ const TradingTerminal = () => {
     };
     
     setActiveContext(contextData);
-    setAiMessage(`$${price.toLocaleString()} 구간 분석 완료:\n\n• 고래 지갑 동향: ${contextData.whaleFlow}\n• 소셜 센티먼트: ${contextData.sentiment}\n• 관련 뉴스: ${contextData.news}\n\n이 레벨은 스마트머니의 방어 구간입니다. 롱 포지션 진입 시 손익비 1:2.4로 유리합니다.`);
   }, []);
+
+  const handleInsightUpdate = (data: InsightData) => {
+    setInsightData(data);
+  };
 
   // TradingView Widget 로드
   useEffect(() => {
@@ -89,80 +93,8 @@ const TradingTerminal = () => {
     };
   }, [selectedSymbol]);
 
-  const handleSendMessage = () => {
-    if (!inputValue.trim()) return;
-    setAiMessage(`질문: "${inputValue}"\n\n현재 시장 상황을 분석한 결과, BTC는 $63,500 지지선 위에서 강세를 유지하고 있습니다. 스마트머니 유입이 지속되고 있어 상승 가능성이 높습니다.`);
-    setInputValue("");
-  };
-
   const AiPanel = (
-    <div className="h-full flex flex-col">
-      <div className="p-4 border-b border-border">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
-              <MessageSquare size={16} className="text-primary" />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-primary">Aime Copilot</h3>
-              <p className="text-[10px] text-muted-foreground">Context-Aware AI</p>
-            </div>
-          </div>
-          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        <div className="bg-muted/30 p-4 rounded-2xl rounded-tl-none border border-border text-sm leading-relaxed whitespace-pre-line">
-          {aiMessage}
-        </div>
-
-        {activeContext && (
-          <div className="bg-primary/5 border border-primary/20 p-4 rounded-xl animate-fade-in">
-            <div className="flex items-center gap-2 mb-3">
-              <TrendingUp size={14} className="text-green-500" />
-              <span className="text-xs font-bold text-primary uppercase">AI 추천 전략</span>
-            </div>
-            <div className="grid grid-cols-3 gap-2 text-center text-xs mb-3">
-              <div className="bg-muted/30 rounded-lg p-2">
-                <p className="text-muted-foreground text-[10px]">Entry</p>
-                <p className="font-mono font-bold">${activeContext.price.toLocaleString()}</p>
-              </div>
-              <div className="bg-green-500/10 rounded-lg p-2">
-                <p className="text-green-500 text-[10px]">Target</p>
-                <p className="font-mono font-bold text-green-500">$65,800</p>
-              </div>
-              <div className="bg-red-500/10 rounded-lg p-2">
-                <p className="text-red-500 text-[10px]">Stop</p>
-                <p className="font-mono font-bold text-red-500">$62,000</p>
-              </div>
-            </div>
-            <button className="w-full py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-bold rounded-lg transition-all">
-              전략 적용하기
-            </button>
-          </div>
-        )}
-      </div>
-
-      <div className="p-4 border-t border-border">
-        <div className="relative">
-          <input
-            type="text"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-            placeholder="차트에 대해 질문하세요..."
-            className="w-full bg-muted/30 border border-border rounded-xl px-4 py-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-all pr-12"
-          />
-          <button 
-            onClick={handleSendMessage}
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-primary hover:bg-primary/10 rounded-lg transition-colors"
-          >
-            <Send size={16} />
-          </button>
-        </div>
-      </div>
-    </div>
+    <AimeSidebar onUpdate={handleInsightUpdate} />
   );
 
   return (

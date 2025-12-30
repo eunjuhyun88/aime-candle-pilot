@@ -9,7 +9,9 @@ import {
   Sparkles,
   ChevronLeft,
   ChevronRight,
-  MessageSquare
+  MessageSquare,
+  X,
+  Minus
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -45,6 +47,7 @@ const AppLayout = ({ children, showAiPanel = false, aiPanel }: AppLayoutProps) =
   const [collapsed, setCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [showMobileAi, setShowMobileAi] = useState(false);
+  const [mobileAiExpanded, setMobileAiExpanded] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -152,7 +155,10 @@ const AppLayout = ({ children, showAiPanel = false, aiPanel }: AppLayoutProps) =
             </div>
             {showAiPanel && isMobile && (
               <button
-                onClick={() => setShowMobileAi(true)}
+                onClick={() => {
+                  setShowMobileAi(true);
+                  setMobileAiExpanded(false);
+                }}
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-xs font-medium"
               >
                 <Sparkles size={12} />
@@ -163,9 +169,12 @@ const AppLayout = ({ children, showAiPanel = false, aiPanel }: AppLayoutProps) =
         </header>
 
         {/* Content + AI Panel */}
-        <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 flex overflow-hidden relative">
           {/* Main Content */}
-          <main className="flex-1 overflow-y-auto">
+          <main className={cn(
+            "flex-1 overflow-y-auto transition-all duration-300",
+            showAiPanel && isMobile && showMobileAi && !mobileAiExpanded ? "pb-[50vh]" : ""
+          )}>
             {children}
           </main>
 
@@ -178,28 +187,37 @@ const AppLayout = ({ children, showAiPanel = false, aiPanel }: AppLayoutProps) =
         </div>
       </div>
 
-      {/* Mobile AI Panel */}
+      {/* Mobile AI Panel - Half Screen Bottom Sheet */}
       {showAiPanel && isMobile && showMobileAi && (
-        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm" onClick={() => setShowMobileAi(false)}>
-          <div 
-            className="absolute bottom-0 left-0 right-0 h-[70vh] bg-card border-t border-border rounded-t-2xl animate-slide-up"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="h-10 border-b border-border flex items-center justify-between px-4">
-              <div className="flex items-center gap-2">
-                <Sparkles size={14} className="text-primary" />
-                <span className="text-sm font-medium">Aime Copilot</span>
-              </div>
+        <div 
+          className={cn(
+            "fixed left-0 right-0 bg-card border-t border-border z-50 transition-all duration-300 flex flex-col",
+            mobileAiExpanded ? "inset-0" : "bottom-0 h-[50vh]"
+          )}
+        >
+          {/* Handle Bar */}
+          <div className="h-10 border-b border-border flex items-center justify-between px-4 shrink-0">
+            <div className="flex items-center gap-2">
+              <Sparkles size={14} className="text-primary" />
+              <span className="text-sm font-medium">Alpha Agent</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <button 
+                onClick={() => setMobileAiExpanded(!mobileAiExpanded)}
+                className="p-1.5 text-muted-foreground hover:text-foreground rounded"
+              >
+                {mobileAiExpanded ? <Minus size={16} /> : <ChevronLeft size={16} className="rotate-90" />}
+              </button>
               <button 
                 onClick={() => setShowMobileAi(false)}
-                className="text-xs text-muted-foreground"
+                className="p-1.5 text-muted-foreground hover:text-foreground rounded"
               >
-                Close
+                <X size={16} />
               </button>
             </div>
-            <div className="h-[calc(70vh-40px)] overflow-hidden">
-              {aiPanel}
-            </div>
+          </div>
+          <div className="flex-1 overflow-hidden">
+            {aiPanel}
           </div>
         </div>
       )}
