@@ -66,14 +66,31 @@ const AppLayout = ({ children, showAiPanel = false, aiPanel }: AppLayoutProps) =
           collapsed ? "w-16" : "w-52"
         )}
       >
-        {/* Logo */}
-        <div className="h-14 border-b border-border flex items-center px-4 gap-3">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shrink-0">
-            <TrendingUp size={16} className="text-primary-foreground" />
+        {/* Logo + Collapse Toggle */}
+        <div className="h-14 border-b border-border flex items-center justify-between px-3">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shrink-0">
+              <TrendingUp size={16} className="text-primary-foreground" />
+            </div>
+            {!collapsed && (
+              <span className="text-lg font-black tracking-tight whitespace-nowrap">STOCKHOO</span>
+            )}
           </div>
-          {!collapsed && (
-            <span className="text-lg font-black tracking-tight whitespace-nowrap">STOCKHOO</span>
-          )}
+          <TooltipProvider delayDuration={0}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => setCollapsed(!collapsed)}
+                  className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-colors"
+                >
+                  {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="bg-popover text-popover-foreground border-border">
+                <span className="font-medium">{collapsed ? 'Expand' : 'Collapse'}</span>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
 
         {/* Navigation */}
@@ -117,17 +134,6 @@ const AppLayout = ({ children, showAiPanel = false, aiPanel }: AppLayoutProps) =
             })}
           </TooltipProvider>
         </nav>
-
-        {/* Collapse Toggle */}
-        <div className="p-2 border-t border-border">
-          <button
-            onClick={() => setCollapsed(!collapsed)}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-colors"
-          >
-            {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-            {!collapsed && <span className="text-xs">Collapse</span>}
-          </button>
-        </div>
       </aside>
 
       {/* Main Content Area */}
