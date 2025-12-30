@@ -1,384 +1,519 @@
-import { useState } from 'react';
-import { Zap, MessageSquare, TrendingUp, Activity, Settings, Bell, Search, Target, ShieldCheck, MousePointer2 } from 'lucide-react';
-import { AlphaSignalCard } from '@/components/AlphaSignalCard';
-import { PlaybookItem } from '@/components/PlaybookItem';
-import { ChartOverlay } from '@/components/ChartOverlay';
-import { CopilotChat } from '@/components/CopilotChat';
-import { ZoneAnalysisTabs } from '@/components/ZoneAnalysisTabs';
-import { TerminalHeader } from '@/components/TerminalHeader';
+import React, { useEffect, useRef, useState } from 'react';
+import { createChart, ColorType, CandlestickSeries } from 'lightweight-charts';
+import type { IChartApi } from 'lightweight-charts';
+import { Zap, MessageSquare, Activity, MousePointer2, ChevronLeft, ChevronRight, Maximize2, Minimize2, TrendingUp, Settings, Bell, Search, BarChart3, Wallet, Users } from 'lucide-react';
 
-// Mock Data
-const mockPlaybooks = [
-  {
-    id: '1',
-    title: 'BTC Squeeze Alert',
-    description: 'Volatility at historical low. Whale accumulation detected in $63k zone. Expecting breakout within 48h.',
-    type: 'bullish' as const,
-    priority: 'high' as const,
-  },
-  {
-    id: '2',
-    title: 'ETH/BTC Rotation',
-    description: 'Smart money shifting from ETH to BTC. On-chain metrics confirm institutional rebalancing.',
-    type: 'neutral' as const,
-    priority: 'medium' as const,
-  },
-  {
-    id: '3',
-    title: 'Funding Rate Divergence',
-    description: 'Perpetual funding rates turning negative while spot accumulation continues. Classic bear trap setup.',
-    type: 'bullish' as const,
-    priority: 'medium' as const,
-  },
-];
+interface Signal {
+  id: string;
+  type: 'bullish' | 'bearish';
+  title: string;
+  confidence: number;
+  entry: string;
+  target: string;
+  stop: string;
+}
 
-const mockSignals = [
-  {
-    id: '1',
-    title: 'Whale Backed Long',
-    timestamp: '2 min ago',
-    reason: 'Smart money absorption at 0.5 Fibonacci level. Social sentiment turning bullish. GEX flipping positive.',
-    entry: '63,500',
-    target: '65,800',
-    stop: '62,750',
-    confidence: 87,
-    type: 'long' as const,
-  },
-];
+const StockHooTerminal = () => {
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<IChartApi | null>(null);
+  
+  // Panel visibility states
+  const [leftPanelOpen, setLeftPanelOpen] = useState(true);
+  const [rightPanelOpen, setRightPanelOpen] = useState(true);
+  const [bottomPanelExpanded, setBottomPanelExpanded] = useState(false);
+  
+  // Chart states
+  const [selectedPrice, setSelectedPrice] = useState(64250.50);
+  const [aiAnalysis, setAiAnalysis] = useState("차트를 클릭하여 가격대를 선택하세요. AI가 해당 구간의 스마트머니 흐름을 분석합니다.");
+  const [activeBottomTab, setActiveBottomTab] = useState<'activities' | 'vibes' | 'holders' | 'orders'>('activities');
+  
+  const [signals] = useState<Signal[]>([
+    { id: '1', type: 'bullish', title: 'BTC Whale Absorption', confidence: 89, entry: '63,250', target: '65,800', stop: '62,100' },
+    { id: '2', type: 'bearish', title: 'ETH Distribution Alert', confidence: 72, entry: '3,450', target: '3,180', stop: '3,520' },
+  ]);
 
-const mockMessages = [
-  {
-    id: '1',
-    role: 'assistant' as const,
-    content: '안녕하세요! 차트에서 $63.5k 구간에 지지선을 그리셨네요. 고래들의 매수벽과 일치하는 강력한 구간입니다. GEX 데이터 분석 결과, 이 레벨에서 84%의 돌파 확률을 계산했습니다.',
-    timestamp: '12:34',
-  },
-  {
-    id: '2',
-    role: 'user' as const,
-    content: '이 구간에서 롱 포지션 진입하면 어떨까?',
-    timestamp: '12:35',
-  },
-  {
-    id: '3',
-    role: 'assistant' as const,
-    content: '좋은 판단입니다! 현재 온체인 지표와 시장 구조를 분석한 Alpha Signal을 생성했습니다. 아래 카드에서 진입점, 목표가, 손절가를 확인하세요.',
-    timestamp: '12:35',
-  },
-];
+  // Chart initialization
+  useEffect(() => {
+    if (!chartContainerRef.current) return;
 
-const mockPositions = [
-  {
-    id: '1',
-    symbol: 'BTC/USDT',
-    type: 'long' as const,
-    entryPrice: '63,250',
-    currentPrice: '64,250',
-    pnl: '$1,250.00',
-    pnlPercent: '+12.4%',
-    confidence: 85,
-    size: '0.5 BTC',
-  },
-  {
-    id: '2',
-    symbol: 'ETH/USDT',
-    type: 'short' as const,
-    entryPrice: '3,450',
-    currentPrice: '3,380',
-    pnl: '$280.00',
-    pnlPercent: '+4.2%',
-    confidence: 72,
-    size: '2.0 ETH',
-  },
-];
+    const chart = createChart(chartContainerRef.current, {
+      layout: {
+        background: { type: ColorType.Solid, color: 'transparent' },
+        textColor: '#8B949E',
+      },
+      grid: {
+        vertLines: { color: 'rgba(48, 54, 61, 0.5)' },
+        horzLines: { color: 'rgba(48, 54, 61, 0.5)' },
+      },
+      width: chartContainerRef.current.clientWidth,
+      height: chartContainerRef.current.clientHeight,
+      timeScale: { 
+        borderVisible: false, 
+        timeVisible: true,
+        secondsVisible: false,
+      },
+      rightPriceScale: {
+        borderVisible: false,
+      },
+      crosshair: {
+        vertLine: {
+          color: 'rgba(168, 85, 247, 0.4)',
+          width: 1,
+          style: 2,
+        },
+        horzLine: {
+          color: 'rgba(168, 85, 247, 0.4)',
+          width: 1,
+          style: 2,
+        },
+      },
+    });
 
-const mockWhaleZones = [
-  { id: '1', top: 35, height: 12, label: 'Whale Accumulation Zone', intensity: 'high' as const },
-  { id: '2', top: 70, height: 8, label: 'Support Cluster', intensity: 'medium' as const },
-];
+    const candlestickSeries = chart.addSeries(CandlestickSeries, {
+      upColor: '#22c55e',
+      downColor: '#ef4444',
+      borderVisible: false,
+      wickUpColor: '#22c55e',
+      wickDownColor: '#ef4444',
+    });
 
-const mockSRLines = [
-  { id: '1', y: 25, price: '65,800', type: 'resistance' as const },
-  { id: '2', y: 45, price: '63,500', type: 'support' as const },
-  { id: '3', y: 75, price: '61,200', type: 'support' as const },
-];
-
-export default function StockHooTerminal() {
-  const [showWhaleHeat, setShowWhaleHeat] = useState(true);
-  const [showSR, setShowSR] = useState(true);
-  const [messages, setMessages] = useState(mockMessages);
-  const [selectedCandle, setSelectedCandle] = useState<{ time: string } | null>(null);
-  const [aiMessage, setAiMessage] = useState("차트의 특정 구간을 클릭하거나 드로잉하여 분석을 시작하세요.");
-
-  const handleSendMessage = (content: string) => {
-    const newMessage = {
-      id: Date.now().toString(),
-      role: 'user' as const,
-      content,
-      timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
+    // Generate mock data
+    const generateMockData = () => {
+      const data = [];
+      let basePrice = 60000;
+      const now = new Date();
+      
+      for (let i = 60; i >= 0; i--) {
+        const date = new Date(now);
+        date.setDate(date.getDate() - i);
+        const dateStr = date.toISOString().split('T')[0];
+        
+        const volatility = Math.random() * 2000 - 1000;
+        const open = basePrice + volatility;
+        const close = open + (Math.random() * 1500 - 750);
+        const high = Math.max(open, close) + Math.random() * 500;
+        const low = Math.min(open, close) - Math.random() * 500;
+        
+        data.push({ time: dateStr, open, high, low, close });
+        basePrice = close;
+      }
+      return data;
     };
-    setMessages([...messages, newMessage]);
-  };
 
-  const handleApplySignal = (signal: any) => {
-    console.log('Applying signal:', signal);
-  };
+    candlestickSeries.setData(generateMockData());
 
-  const handleChartClick = () => {
-    const candleData = { time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) };
-    setSelectedCandle(candleData);
-    setAiMessage(`${candleData.time} 구간의 스마트머니 흐름을 분석 중입니다...`);
-  };
+    // Whale Zone price lines
+    candlestickSeries.createPriceLine({
+      price: 63500,
+      color: 'rgba(168, 85, 247, 0.6)',
+      lineWidth: 2,
+      lineStyle: 2,
+      axisLabelVisible: true,
+      title: '🐋 Whale Zone',
+    });
+
+    candlestickSeries.createPriceLine({
+      price: 65800,
+      color: 'rgba(34, 197, 94, 0.6)',
+      lineWidth: 1,
+      lineStyle: 2,
+      axisLabelVisible: true,
+      title: 'Target',
+    });
+
+    candlestickSeries.createPriceLine({
+      price: 61200,
+      color: 'rgba(239, 68, 68, 0.6)',
+      lineWidth: 1,
+      lineStyle: 2,
+      axisLabelVisible: true,
+      title: 'Support',
+    });
+
+    // Chart click event
+    chart.subscribeClick((param) => {
+      if (param.point) {
+        const price = candlestickSeries.coordinateToPrice(param.point.y);
+        if (price) {
+          setSelectedPrice(Number(price.toFixed(2)));
+          setAiAnalysis(`$${price.toFixed(2)} 구간 분석 완료:\n\n• 스마트머니 매집 강도: 높음\n• 고래 지갑 유입: +1,240 BTC\n• 돌파 시 숏 스퀴즈 확률: 72%\n\n이 레벨에서 롱 포지션 진입을 권장합니다.`);
+        }
+      }
+    });
+
+    chartRef.current = chart;
+
+    // Handle resize
+    const handleResize = () => {
+      if (chartContainerRef.current && chartRef.current) {
+        chartRef.current.applyOptions({ 
+          width: chartContainerRef.current.clientWidth,
+          height: chartContainerRef.current.clientHeight,
+        });
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    
+    // Initial resize after panel transitions
+    const resizeTimer = setTimeout(handleResize, 300);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      clearTimeout(resizeTimer);
+      chart.remove();
+    };
+  }, [leftPanelOpen, rightPanelOpen]);
+
+  const bottomTabs = [
+    { id: 'activities' as const, label: 'Whale Activities', icon: Activity },
+    { id: 'vibes' as const, label: 'Social Vibes', icon: MessageSquare },
+    { id: 'holders' as const, label: 'Holders', icon: Users },
+    { id: 'orders' as const, label: 'Order Flow', icon: BarChart3 },
+  ];
 
   return (
-    <div className="flex h-screen bg-background text-foreground overflow-hidden font-mono selection:bg-primary/30">
-      {/* LEFT: Intel Panel */}
-      <aside className="w-72 border-r border-border bg-card flex flex-col transition-all duration-300">
-        {/* Logo */}
-        <div className="p-5 border-b border-border">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center animate-pulse-glow">
-              <TrendingUp size={20} className="text-primary-foreground" />
-            </div>
-            <div>
-              <h1 className="text-xl font-black text-gradient tracking-tight">STOCKHOO</h1>
-              <p className="text-[9px] text-muted-foreground uppercase tracking-[0.2em]">Intelligence OS</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Search */}
-        <div className="p-4 border-b border-border">
-          <div className="relative">
-            <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Search markets..."
-              className="w-full bg-muted border border-border rounded-lg pl-8 pr-3 py-2 text-xs placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors"
-            />
-          </div>
-        </div>
-
-        {/* Active Playbook */}
-        <div className="flex-1 overflow-y-auto scrollbar-thin p-4">
-          <div className="flex items-center gap-2 mb-4">
-            <Zap size={12} className="text-primary" />
-            <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-              Active Playbook
-            </h3>
-            <div className="flex-1 h-px bg-border" />
-          </div>
-          
-          <div className="space-y-3">
-            {mockPlaybooks.map((playbook) => (
-              <PlaybookItem
-                key={playbook.id}
-                playbook={playbook}
-                onClick={(p) => console.log('Selected:', p)}
-              />
-            ))}
-          </div>
-
-          {/* Market Pulse */}
-          <div className="mt-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Activity size={12} className="text-signal-green" />
-              <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                Market Pulse
-              </h3>
-              <div className="flex-1 h-px bg-border" />
-            </div>
-            
-            <div className="terminal-card p-3 space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-[10px] text-muted-foreground">Fear & Greed</span>
-                <span className="text-xs font-bold text-signal-green">72 (Greed)</span>
-              </div>
-              <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-signal-red via-warning to-signal-green rounded-full" style={{ width: '72%' }} />
-              </div>
-              <div className="grid grid-cols-2 gap-2 pt-2 text-[10px]">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">BTC Dom</span>
-                  <span className="text-foreground font-medium">54.2%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">OI Change</span>
-                  <span className="text-signal-green font-medium">+3.2%</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Settings */}
-        <div className="p-4 border-t border-border">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center">
-                <span className="text-xs font-bold text-primary">T</span>
+    <div className="flex h-screen bg-background text-foreground font-sans overflow-hidden selection:bg-primary/30">
+      
+      {/* LEFT PANEL: Intel Feed */}
+      <aside className={`${leftPanelOpen ? 'w-72' : 'w-0'} transition-all duration-300 ease-in-out border-r border-border bg-card flex flex-col overflow-hidden`}>
+        <div className="min-w-72">
+          {/* Header */}
+          <div className="p-5 border-b border-border">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center animate-pulse-glow">
+                <TrendingUp size={20} className="text-primary-foreground" />
               </div>
               <div>
-                <p className="text-xs font-medium text-foreground">Trader</p>
-                <p className="text-[9px] text-muted-foreground">Pro Plan</p>
+                <h1 className="text-xl font-black text-gradient tracking-tight">STOCKHOO</h1>
+                <p className="text-[9px] text-muted-foreground uppercase tracking-[0.2em]">Intelligence OS v3.0</p>
               </div>
             </div>
-            <div className="flex gap-1">
-              <button className="p-1.5 hover:bg-muted rounded-md transition-colors">
-                <Bell size={14} className="text-muted-foreground" />
-              </button>
-              <button className="p-1.5 hover:bg-muted rounded-md transition-colors">
-                <Settings size={14} className="text-muted-foreground" />
-              </button>
+          </div>
+
+          {/* Search */}
+          <div className="p-4 border-b border-border">
+            <div className="relative">
+              <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search markets..."
+                className="w-full bg-muted border border-border rounded-lg pl-8 pr-3 py-2 text-xs placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors"
+              />
+            </div>
+          </div>
+
+          {/* Alpha Signals */}
+          <div className="flex-1 overflow-y-auto scrollbar-thin p-4">
+            <div className="flex items-center gap-2 mb-4">
+              <Zap size={12} className="text-signal-green" />
+              <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Alpha Signals</h3>
+              <div className="flex-1 h-px bg-border" />
+            </div>
+
+            <div className="space-y-3">
+              {signals.map((signal) => (
+                <div 
+                  key={signal.id}
+                  className="terminal-card p-4 rounded-xl border border-primary/20 hover:border-primary/50 transition-all cursor-pointer group hover:shadow-lg hover:shadow-primary/5"
+                >
+                  <div className="flex justify-between items-center mb-2">
+                    <span className={`text-[10px] font-bold ${signal.type === 'bullish' ? 'text-signal-green' : 'text-signal-red'}`}>
+                      {signal.type === 'bullish' ? '▲ BULLISH' : '▼ BEARISH'}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground font-mono">{signal.confidence}% CONF</span>
+                  </div>
+                  <h4 className="text-sm font-bold mb-3 text-foreground group-hover:text-primary transition-colors">{signal.title}</h4>
+                  <div className="grid grid-cols-3 gap-2 text-[10px]">
+                    <div className="bg-muted/50 rounded p-2">
+                      <p className="text-muted-foreground mb-1">ENTRY</p>
+                      <p className="text-foreground font-mono font-bold">{signal.entry}</p>
+                    </div>
+                    <div className="bg-muted/50 rounded p-2">
+                      <p className="text-muted-foreground mb-1">TARGET</p>
+                      <p className="text-signal-green font-mono font-bold">{signal.target}</p>
+                    </div>
+                    <div className="bg-muted/50 rounded p-2">
+                      <p className="text-muted-foreground mb-1">STOP</p>
+                      <p className="text-signal-red font-mono font-bold">{signal.stop}</p>
+                    </div>
+                  </div>
+                  <button className="w-full mt-3 py-2 bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground text-xs font-bold rounded-lg transition-all">
+                    Apply Strategy
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* Market Stats */}
+            <div className="mt-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Activity size={12} className="text-primary" />
+                <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Market Pulse</h3>
+                <div className="flex-1 h-px bg-border" />
+              </div>
+              <div className="terminal-card p-3 space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] text-muted-foreground">Fear & Greed</span>
+                  <span className="text-xs font-bold text-signal-green">72 (Greed)</span>
+                </div>
+                <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-signal-red via-warning to-signal-green rounded-full transition-all" style={{ width: '72%' }} />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* User */}
+          <div className="p-4 border-t border-border">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center">
+                  <span className="text-xs font-bold text-primary">T</span>
+                </div>
+                <div>
+                  <p className="text-xs font-medium">Trader</p>
+                  <p className="text-[9px] text-muted-foreground">Pro Plan</p>
+                </div>
+              </div>
+              <div className="flex gap-1">
+                <button className="p-1.5 hover:bg-muted rounded-md transition-colors">
+                  <Bell size={14} className="text-muted-foreground" />
+                </button>
+                <button className="p-1.5 hover:bg-muted rounded-md transition-colors">
+                  <Settings size={14} className="text-muted-foreground" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </aside>
 
-      {/* CENTER: Main Content */}
-      <main className="flex-1 flex flex-col min-w-0">
-        <TerminalHeader
-          symbol="BTC/USDT"
-          price="64,250.50"
-          change="+2.45%"
-          isPositive={true}
-          showWhaleHeat={showWhaleHeat}
-          showSR={showSR}
-          onToggleWhaleHeat={() => setShowWhaleHeat(!showWhaleHeat)}
-          onToggleSR={() => setShowSR(!showSR)}
-        />
+      {/* LEFT TOGGLE */}
+      <button 
+        onClick={() => setLeftPanelOpen(!leftPanelOpen)}
+        className="absolute left-0 top-1/2 -translate-y-1/2 z-20 w-5 h-12 bg-card border border-border rounded-r-lg flex items-center justify-center hover:bg-muted transition-colors group"
+        style={{ left: leftPanelOpen ? '18rem' : 0 }}
+      >
+        {leftPanelOpen ? <ChevronLeft size={14} className="text-muted-foreground group-hover:text-foreground" /> : <ChevronRight size={14} className="text-muted-foreground group-hover:text-foreground" />}
+      </button>
 
-        {/* Chart Area */}
-        <div 
-          className="flex-1 relative bg-background overflow-hidden cursor-crosshair group"
-          onClick={handleChartClick}
-        >
-          <ChartOverlay
-            whaleZones={mockWhaleZones}
-            srLines={mockSRLines}
-            showWhaleHeat={showWhaleHeat}
-            showSR={showSR}
-          />
-          
-          {/* Selected Zone Indicator */}
-          {selectedCandle && (
-            <div className="absolute top-[30%] left-[40%] border-2 border-signal-green/50 bg-signal-green/5 p-4 rounded-lg animate-pulse-glow z-10">
-              <div className="flex items-center gap-2">
-                <ShieldCheck size={14} className="text-signal-green" />
-                <span className="text-[10px] font-bold text-signal-green">ZONE SELECTED: $63.2K - $63.8K</span>
+      {/* CENTER: Chart Area */}
+      <main className="flex-1 flex flex-col min-w-0 relative">
+        {/* Header */}
+        <header className="h-14 border-b border-border bg-card flex items-center px-4 justify-between shrink-0">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold">BTC/USDT</span>
+              <div className="flex items-center gap-1">
+                <TrendingUp size={14} className="text-signal-green" />
+                <span className="text-signal-green font-bold text-sm">${selectedPrice.toLocaleString()}</span>
               </div>
             </div>
-          )}
-          
-          {/* Chart Placeholder */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-muted/50 flex items-center justify-center">
-                <TrendingUp size={28} className="text-muted-foreground" />
-              </div>
-              <p className="text-muted-foreground text-sm mb-1">TradingView Chart</p>
-              <p className="text-muted-foreground/50 text-[10px]">Click anywhere to simulate zone selection</p>
+            <div className="flex bg-muted rounded-lg p-1 gap-1">
+              {['15m', '1H', '4H', '1D'].map((tf, i) => (
+                <button 
+                  key={tf} 
+                  className={`px-3 py-1 text-[10px] font-medium rounded transition-colors ${i === 1 ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted/80'}`}
+                >
+                  {tf}
+                </button>
+              ))}
             </div>
           </div>
-
-          {/* Candle Candlestick Mock */}
-          <div className="absolute bottom-20 left-0 right-0 h-40 flex items-end justify-center gap-1 px-20 opacity-20 pointer-events-none">
-            {Array.from({ length: 40 }).map((_, i) => {
-              const height = Math.random() * 80 + 20;
-              const isGreen = Math.random() > 0.4;
-              return (
-                <div
-                  key={i}
-                  className={`w-2 rounded-sm ${isGreen ? 'bg-signal-green' : 'bg-signal-red'}`}
-                  style={{ height: `${height}%` }}
-                />
-              );
-            })}
+          <div className="flex gap-2">
+            <button className="px-3 py-1.5 text-[10px] font-bold bg-primary/10 text-primary border border-primary/20 rounded-lg hover:bg-primary/20 transition-all flex items-center gap-1">
+              🐋 Whale Heat
+            </button>
+            <button className="px-3 py-1.5 text-[10px] font-bold bg-muted text-muted-foreground rounded-lg hover:bg-muted/80 transition-all">
+              GEX Levels
+            </button>
           </div>
-        </div>
+        </header>
 
-        {/* Bottom Zone Analysis */}
-        <div className="h-64 border-t border-border bg-card">
-          <ZoneAnalysisTabs positions={mockPositions} selectedCandle={selectedCandle} />
+        {/* Chart */}
+        <div ref={chartContainerRef} className="flex-1 bg-background" />
+
+        {/* BOTTOM PANEL */}
+        <div className={`${bottomPanelExpanded ? 'h-80' : 'h-48'} transition-all duration-300 border-t border-border bg-card shrink-0`}>
+          {/* Bottom Header */}
+          <div className="flex items-center justify-between px-4 py-2 border-b border-border">
+            <div className="flex gap-1">
+              {bottomTabs.map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveBottomTab(tab.id)}
+                    className={`flex items-center gap-2 px-3 py-1.5 text-[11px] font-medium rounded-lg transition-all ${
+                      activeBottomTab === tab.id
+                        ? 'bg-primary/10 text-primary'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                    }`}
+                  >
+                    <Icon size={12} />
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+            <button 
+              onClick={() => setBottomPanelExpanded(!bottomPanelExpanded)}
+              className="p-1.5 hover:bg-muted rounded-md transition-colors"
+            >
+              {bottomPanelExpanded ? <Minimize2 size={14} className="text-muted-foreground" /> : <Maximize2 size={14} className="text-muted-foreground" />}
+            </button>
+          </div>
+
+          {/* Bottom Content */}
+          <div className="p-4 overflow-y-auto h-[calc(100%-40px)] scrollbar-thin">
+            {activeBottomTab === 'activities' && (
+              <div className="space-y-2 font-mono text-xs">
+                <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg border border-signal-green/20">
+                  <div className="w-2 h-2 rounded-full bg-signal-green animate-pulse" />
+                  <span className="text-signal-green font-bold">ACCUMULATION</span>
+                  <span className="text-muted-foreground">2,500 BTC</span>
+                  <span className="text-muted-foreground ml-auto">Binance → Cold Wallet</span>
+                  <span className="text-muted-foreground">3m ago</span>
+                </div>
+                <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg border border-signal-red/20">
+                  <div className="w-2 h-2 rounded-full bg-signal-red" />
+                  <span className="text-signal-red font-bold">DISTRIBUTION</span>
+                  <span className="text-muted-foreground">850 BTC</span>
+                  <span className="text-muted-foreground ml-auto">Cold → Coinbase</span>
+                  <span className="text-muted-foreground">12m ago</span>
+                </div>
+                <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg border border-primary/20">
+                  <div className="w-2 h-2 rounded-full bg-primary" />
+                  <span className="text-primary font-bold">TRANSFER</span>
+                  <span className="text-muted-foreground">1,200 BTC</span>
+                  <span className="text-muted-foreground ml-auto">Internal</span>
+                  <span className="text-muted-foreground">18m ago</span>
+                </div>
+              </div>
+            )}
+            {activeBottomTab === 'vibes' && (
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { source: 'Twitter/X', sentiment: 'Bullish', score: 78, change: '+12%' },
+                  { source: 'Reddit', sentiment: 'Neutral', score: 52, change: '-3%' },
+                  { source: 'Telegram', sentiment: 'Bullish', score: 85, change: '+8%' },
+                ].map((item, i) => (
+                  <div key={i} className="terminal-card p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className={`w-2 h-2 rounded-full ${item.sentiment === 'Bullish' ? 'bg-signal-green' : item.sentiment === 'Bearish' ? 'bg-signal-red' : 'bg-warning'}`} />
+                      <span className="text-xs font-medium">{item.source}</span>
+                    </div>
+                    <div className="flex justify-between items-end">
+                      <span className={`text-lg font-bold ${item.sentiment === 'Bullish' ? 'text-signal-green' : 'text-warning'}`}>{item.score}</span>
+                      <span className={`text-[10px] ${item.change.startsWith('+') ? 'text-signal-green' : 'text-signal-red'}`}>{item.change}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {activeBottomTab === 'holders' && (
+              <div className="text-center text-muted-foreground text-xs py-8">
+                Holder distribution data loading...
+              </div>
+            )}
+            {activeBottomTab === 'orders' && (
+              <div className="text-center text-muted-foreground text-xs py-8">
+                Order flow data syncing...
+              </div>
+            )}
+          </div>
         </div>
       </main>
 
-      {/* RIGHT: AI Copilot */}
-      <aside className="w-80 border-l border-border bg-card flex flex-col">
-        <div className="p-4 border-b border-border">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-primary/20 flex items-center justify-center">
-                <MessageSquare size={14} className="text-primary" />
+      {/* RIGHT TOGGLE */}
+      <button 
+        onClick={() => setRightPanelOpen(!rightPanelOpen)}
+        className="absolute right-0 top-1/2 -translate-y-1/2 z-20 w-5 h-12 bg-card border border-border rounded-l-lg flex items-center justify-center hover:bg-muted transition-colors group"
+        style={{ right: rightPanelOpen ? '20rem' : 0 }}
+      >
+        {rightPanelOpen ? <ChevronRight size={14} className="text-muted-foreground group-hover:text-foreground" /> : <ChevronLeft size={14} className="text-muted-foreground group-hover:text-foreground" />}
+      </button>
+
+      {/* RIGHT PANEL: AI Copilot */}
+      <aside className={`${rightPanelOpen ? 'w-80' : 'w-0'} transition-all duration-300 ease-in-out border-l border-border bg-card flex flex-col overflow-hidden`}>
+        <div className="min-w-80">
+          {/* Header */}
+          <div className="p-4 border-b border-border">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+                  <MessageSquare size={16} className="text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-primary uppercase tracking-tight">Aime AI Copilot</h3>
+                  <p className="text-[9px] text-muted-foreground">Real-time analysis</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-xs font-bold text-primary uppercase tracking-tight">Aime AI Copilot</h3>
-                <p className="text-[9px] text-muted-foreground">Real-time analysis</p>
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 rounded-full bg-signal-green animate-pulse" />
+                <span className="text-[9px] text-muted-foreground">Active</span>
               </div>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-2 h-2 rounded-full bg-signal-green animate-pulse" />
-              <span className="text-[9px] text-muted-foreground">Active</span>
             </div>
           </div>
-        </div>
 
-        <div className="flex-1 overflow-hidden flex flex-col p-4">
-          <div className="flex-1 overflow-y-auto scrollbar-thin space-y-4 mb-4">
-            {/* Context Message */}
-            <div className="bg-muted/50 p-4 rounded-2xl rounded-tl-none border border-border text-xs leading-relaxed">
-              {aiMessage}
-            </div>
-            
-            {/* Analysis Result when candle selected */}
-            {selectedCandle && (
-              <div className="space-y-3 animate-fade-in">
-                <div className="bg-primary/10 border border-primary/30 p-3 rounded-xl text-[11px]">
-                  <p className="text-primary font-bold mb-1">💡 분석 완료</p>
-                  <p className="text-muted-foreground leading-snug">현재 지지선에서 스마트머니 매집이 확인됩니다. 돌파 시 숏 스퀴즈 발생 확률 74%입니다.</p>
+          {/* Chat Area */}
+          <div className="flex-1 p-4 overflow-y-auto scrollbar-thin" style={{ height: 'calc(100vh - 200px)' }}>
+            <div className="space-y-4">
+              {/* AI Message */}
+              <div className="bg-muted/50 p-4 rounded-2xl rounded-tl-none border border-border text-xs leading-relaxed whitespace-pre-line">
+                {aiAnalysis}
+              </div>
+
+              {/* Strategy Card */}
+              <div className="bg-primary/5 border border-primary/20 p-4 rounded-xl">
+                <div className="flex items-center gap-2 mb-3">
+                  <TrendingUp size={14} className="text-signal-green" />
+                  <span className="text-[10px] font-bold text-primary uppercase">Recommended Strategy</span>
                 </div>
-                <button className="w-full py-3 bg-foreground text-background text-xs font-black rounded-xl hover:bg-primary hover:text-primary-foreground transition-all flex items-center justify-center gap-2">
-                  <Target size={14} /> 전략 실행 (One-Click)
+                <div className="grid grid-cols-2 gap-2 text-[10px] mb-3">
+                  <div>
+                    <p className="text-muted-foreground">Position</p>
+                    <p className="text-signal-green font-bold">LONG</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Leverage</p>
+                    <p className="text-foreground font-bold">5x</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Entry</p>
+                    <p className="text-foreground font-mono">${selectedPrice.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Risk/Reward</p>
+                    <p className="text-signal-green font-bold">1:2.4</p>
+                  </div>
+                </div>
+                <button className="w-full py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2">
+                  <Wallet size={14} />
+                  Apply to Terminal
                 </button>
               </div>
-            )}
-            
-            <CopilotChat
-              messages={messages}
-              onSendMessage={handleSendMessage}
-            />
-          </div>
-          
-          {/* Alpha Signal Card */}
-          <div className="border-t border-border pt-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Zap size={10} className="text-primary" />
-              <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Latest Signal</span>
             </div>
-            {mockSignals.map((signal) => (
-              <AlphaSignalCard
-                key={signal.id}
-                signal={signal}
-                onApply={handleApplySignal}
-              />
-            ))}
           </div>
-        </div>
 
-        {/* Chat Input */}
-        <div className="p-4 border-t border-border bg-muted/30">
-          <div className="relative group">
-            <input 
-              type="text" 
-              placeholder="차트 패턴이나 고래 활동 질문..."
-              className="w-full bg-background/40 border border-border rounded-xl px-4 py-3 text-xs focus:outline-none focus:border-primary transition-all placeholder:text-muted-foreground"
-            />
-            <button className="absolute right-3 top-2.5 p-1 text-primary group-hover:scale-110 transition-all">
-              <MousePointer2 size={16} />
-            </button>
+          {/* Input */}
+          <div className="p-4 border-t border-border">
+            <div className="relative group">
+              <input
+                type="text"
+                placeholder="Ask about Smart Money..."
+                className="w-full bg-muted/50 border border-border rounded-xl px-4 py-3 text-xs placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-all"
+              />
+              <button className="absolute right-3 top-2.5 p-1 text-muted-foreground group-hover:text-primary transition-colors">
+                <MousePointer2 size={16} />
+              </button>
+            </div>
           </div>
         </div>
       </aside>
     </div>
   );
-}
+};
+
+export default StockHooTerminal;
