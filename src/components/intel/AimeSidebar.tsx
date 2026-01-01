@@ -17,6 +17,7 @@ interface Message {
 
 interface AimeSidebarProps {
   onUpdate: (data: InsightData) => void;
+  onAnalysisResponse?: (response: string) => void;
   hideHeader?: boolean;
 }
 
@@ -31,7 +32,7 @@ const quickQuestions = [
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/onchain-chat`;
 
-const AimeSidebar = ({ onUpdate, hideHeader = false }: AimeSidebarProps) => {
+const AimeSidebar = ({ onUpdate, onAnalysisResponse, hideHeader = false }: AimeSidebarProps) => {
   const { user } = useAuth();
   const { fetchMarketData, isLoading: isLoadingMarket } = useMarketData();
   const [messages, setMessages] = useState<Message[]>([
@@ -242,6 +243,11 @@ const AimeSidebar = ({ onUpdate, hideHeader = false }: AimeSidebarProps) => {
             }
           } catch { /* ignore */ }
         }
+      }
+
+      // Send analysis response to chart overlay
+      if (onAnalysisResponse && assistantContent) {
+        onAnalysisResponse(assistantContent);
       }
 
       // Check for token analysis in response
