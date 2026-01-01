@@ -3,6 +3,9 @@ import { Activity, TrendingUp, Zap, MessageSquare } from 'lucide-react';
 import AppLayout from '@/components/layout/AppLayout';
 import AimeSidebar from '@/components/intel/AimeSidebar';
 import { InsightData } from '@/pages/Intel';
+import ChartAnalysisOverlay from '@/components/chart/ChartAnalysisOverlay';
+import AnalysisControlPanel from '@/components/chart/AnalysisControlPanel';
+import useChartAnalysis, { ChartAnalysisData } from '@/hooks/useChartAnalysis';
 
 declare global {
   interface Window {
@@ -25,6 +28,27 @@ const TradingTerminal = () => {
   
   // Candle-Centric Context State
   const [activeContext, setActiveContext] = useState<ContextData | null>(null);
+  
+  // Chart Analysis Overlay
+  const {
+    analysisData,
+    showLevels,
+    showZones,
+    setShowLevels,
+    setShowZones,
+    updateFromAIResponse,
+    clearAnalysis,
+  } = useChartAnalysis();
+
+  // Get current price from symbol (mock for now)
+  const getCurrentPrice = useCallback(() => {
+    const prices: Record<string, number> = {
+      'BINANCE:BTCUSDT': 64250,
+      'BINANCE:ETHUSDT': 3200,
+      'BINANCE:SOLUSDT': 145,
+    };
+    return prices[selectedSymbol] || 64250;
+  }, [selectedSymbol]);
 
   // Candle-Snap Intelligence: 클릭 시 전체 패널 동기화
   const syncAllPanels = useCallback((price: number, time: string) => {
@@ -42,6 +66,11 @@ const TradingTerminal = () => {
   const handleInsightUpdate = (data: InsightData) => {
     setInsightData(data);
   };
+  
+  // Handle AI analysis response for chart overlay
+  const handleAnalysisUpdate = useCallback((response: string) => {
+    updateFromAIResponse(response, getCurrentPrice());
+  }, [updateFromAIResponse, getCurrentPrice]);
 
   // TradingView Widget 로드
   useEffect(() => {
@@ -94,7 +123,10 @@ const TradingTerminal = () => {
   }, [selectedSymbol]);
 
   const AiPanel = (
-    <AimeSidebar onUpdate={handleInsightUpdate} />
+    <AimeSidebar 
+      onUpdate={handleInsightUpdate} 
+      onAnalysisResponse={handleAnalysisUpdate}
+    />
   );
 
   return (
@@ -125,8 +157,19 @@ const TradingTerminal = () => {
             ))}
           </div>
           <div className="ml-auto flex items-center gap-2">
+            <AnalysisControlPanel
+              showLevels={showLevels}
+              showZones={showZones}
+              onToggleLevels={() => setShowLevels(!showLevels)}
+              onToggleZones={() => setShowZones(!showZones)}
+              onClear={clearAnalysis}
+              levelsCount={analysisData.priceLevels.length}
+              zonesCount={analysisData.zones.length}
+              trendBias={analysisData.trendBias}
+            />
+            <div className="h-4 w-px bg-border" />
             <button 
-              onClick={() => syncAllPanels(64250, new Date().toLocaleTimeString())}
+              onClick={() => syncAllPanels(getCurrentPrice(), new Date().toLocaleTimeString())}
               className="px-3 py-1 text-[10px] font-bold bg-primary/20 text-primary hover:bg-primary/30 rounded transition-colors"
             >
               🐋 Whale Heat
@@ -135,11 +178,24 @@ const TradingTerminal = () => {
         </div>
         
         {/* Chart - Takes all remaining space */}
-        <div 
-          id="tradingview_chart" 
-          ref={chartContainerRef} 
-          className="flex-1 min-h-0 w-full bg-[#0B0E11]"
-        />
+        <div className="relative flex-1 min-h-0 w-full">
+          <div 
+            id="tradingview_chart" 
+            ref={chartContainerRef} 
+            className="absolute inset-0 bg-[#0B0E11]"
+          />
+          
+          {/* Chart Analysis Overlay */}
+          <ChartAnalysisOverlay
+            priceLevels={analysisData.priceLevels}
+            zones={analysisData.zones}
+            trendBias={analysisData.trendBias}
+            currentPrice={getCurrentPrice()}
+            priceRange={analysisData.priceRange}
+            showLevels={showLevels}
+            showZones={showZones}
+          />
+        </div>
 
         {/* Bottom Context Bar - Compact */}
         {activeContext && (
