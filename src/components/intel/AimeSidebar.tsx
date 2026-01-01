@@ -1,10 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { InsightData } from '@/pages/Intel';
-import { Send, Sparkles, Bot, User } from 'lucide-react';
+import { Send, Sparkles, Bot, User, ChevronDown, ChevronUp } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import OnchainMetrics from './OnchainMetrics';
+import AnalysisTypeSelector, { AnalysisType, analysisTypes } from './AnalysisTypeSelector';
+import { useMarketData, formatPrice, formatLargeNumber, formatPercent } from '@/hooks/useMarketData';
 
 interface Message {
   id: string;
@@ -31,11 +33,12 @@ const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/onchain-chat
 
 const AimeSidebar = ({ onUpdate, hideHeader = false }: AimeSidebarProps) => {
   const { user } = useAuth();
+  const { fetchMarketData, isLoading: isLoadingMarket } = useMarketData();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
       role: 'assistant',
-      content: '안녕하세요! 저는 온체인 분석 전문 AI입니다. 🔍\n\n다음과 같은 것들을 도와드릴 수 있어요:\n• 지갑 주소 분석 및 고래 추적\n• 토큰 홀더 분포 및 유동성 분석\n• 거래소 입출금 흐름\n• DeFi TVL 및 수익률 분석\n\n질문해주세요!',
+      content: '안녕하세요! 저는 Alpha Agent입니다. 🔍\n\n6가지 전문 분석을 제공합니다:\n• HTF→LTF 탑다운 분석\n• 코인 밸류에이션 (Mcap, FDV, TVL)\n• 온체인/파생상품 데이터\n• VPA 거래량 분석\n• ICT 유동성 분석\n• Wyckoff 사이클 분석\n\n분석 타입을 선택하고 코인 심볼을 입력해주세요!',
       timestamp: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
     }
   ]);
@@ -43,6 +46,8 @@ const AimeSidebar = ({ onUpdate, hideHeader = false }: AimeSidebarProps) => {
   const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [loadingQuestion, setLoadingQuestion] = useState<string | null>(null);
+  const [selectedAnalysisType, setSelectedAnalysisType] = useState<AnalysisType | null>(null);
+  const [showAnalysisTypes, setShowAnalysisTypes] = useState(true);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -50,7 +55,7 @@ const AimeSidebar = ({ onUpdate, hideHeader = false }: AimeSidebarProps) => {
     }
   }, [messages, isTyping]);
 
-  const streamChat = async (userMessages: { role: string; content: string }[]) => {
+  const streamChat = async (userMessages: { role: string; content: string }[], analysisType?: AnalysisType) => {
     const response = await fetch(CHAT_URL, {
       method: "POST",
       headers: {
@@ -59,7 +64,8 @@ const AimeSidebar = ({ onUpdate, hideHeader = false }: AimeSidebarProps) => {
       },
       body: JSON.stringify({ 
         messages: userMessages,
-        userId: user?.id 
+        userId: user?.id,
+        analysisType,
       }),
     });
 
@@ -77,13 +83,73 @@ const AimeSidebar = ({ onUpdate, hideHeader = false }: AimeSidebarProps) => {
     return response;
   };
 
-  const handleSendMessage = async (messageText: string) => {
+  // Extract symbol from user message
+  const extractSymbol = (text: string): string | null => {
+    const upperText = text.toUpperCase();
+    const symbols = ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA', 'AVAX', 'DOGE', 'DOT', 'MATIC', 'LINK', 'ATOM', 'UNI', 'LTC', 'NEAR', 'APT', 'ARB', 'OP', 'SUI'];
+    for (const sym of symbols) {
+      if (upperText.includes(sym)) {
+        return sym;
+      }
+    }
+    // Try to match patterns like "BTCUSDT" or "$BTC"
+    const match = upperText.match(/\$?([A-Z]{2,5})(?:USDT?)?/);
+    return match ? match[1] : null;
+  };
+
+  const handleSendMessage = async (messageText: string, analysisTypeOverride?: AnalysisType) => {
     if (!messageText.trim() || isTyping) return;
+    
+    const activeAnalysisType = analysisTypeOverride || selectedAnalysisType;
+    const symbol = extractSymbol(messageText);
+    
+    // Fetch market data if symbol is detected
+    let marketDataContext = '';
+    if (symbol && activeAnalysisType) {
+      try {
+        const marketData = await fetchMarketData(symbol);
+        if (marketData?.data) {
+          const { binance, coingecko, derivatives } = marketData.data;
+          marketDataContext = `\n\n[실시간 시장 데이터 - ${symbol}]\n`;
+          
+          if (binance) {
+            marketDataContext += `• 현재가: $${formatPrice(binance.price)} (${formatPercent(binance.priceChange24h)})\n`;
+            marketDataContext += `• 24h 거래량: ${formatLargeNumber(binance.volume24h)}\n`;
+            marketDataContext += `• 24h 고/저: $${formatPrice(binance.highPrice24h)} / $${formatPrice(binance.lowPrice24h)}\n`;
+          }
+          
+          if (coingecko) {
+            marketDataContext += `• 시가총액: ${formatLargeNumber(coingecko.marketCap)}\n`;
+            marketDataContext += `• FDV: ${formatLargeNumber(coingecko.fdv)}\n`;
+            marketDataContext += `• ATH: $${formatPrice(coingecko.ath)} (${formatPercent(coingecko.athChangePercentage)})\n`;
+          }
+          
+          if (derivatives) {
+            marketDataContext += `• OI: ${derivatives.openInterest.toLocaleString()} contracts\n`;
+            marketDataContext += `• Funding Rate: ${derivatives.fundingRate.toFixed(4)}%\n`;
+            marketDataContext += `• Long/Short Ratio: ${derivatives.longShortRatio.toFixed(2)}\n`;
+          }
+        }
+      } catch (e) {
+        console.log('Failed to fetch market data:', e);
+      }
+    }
+    
+    // Prepend analysis type context if selected
+    let enrichedMessage = messageText;
+    if (activeAnalysisType) {
+      const analysisConfig = analysisTypes.find(t => t.id === activeAnalysisType);
+      if (analysisConfig) {
+        enrichedMessage = `[${analysisConfig.label} 분석 요청]\n${analysisConfig.prompt}\n\n사용자 질문: ${messageText}${marketDataContext}`;
+      }
+    } else if (marketDataContext) {
+      enrichedMessage = messageText + marketDataContext;
+    }
     
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
-      content: messageText,
+      content: messageText, // Display original message
       timestamp: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
     };
     
@@ -92,12 +158,10 @@ const AimeSidebar = ({ onUpdate, hideHeader = false }: AimeSidebarProps) => {
     setIsTyping(true);
     
     try {
-      // Prepare messages for API (exclude timestamps and ids)
-      const apiMessages = [...messages, userMessage]
-        .filter(m => m.role === 'user' || m.role === 'assistant')
-        .map(m => ({ role: m.role, content: m.content }));
+      // Prepare messages for API with enriched context
+      const apiMessages = [...messages.map(m => ({ role: m.role, content: m.content })), { role: 'user', content: enrichedMessage }];
 
-      const response = await streamChat(apiMessages);
+      const response = await streamChat(apiMessages, activeAnalysisType);
       
       if (!response.body) {
         throw new Error("No response body");
@@ -241,13 +305,21 @@ const AimeSidebar = ({ onUpdate, hideHeader = false }: AimeSidebarProps) => {
 
   const handleQuickQuestion = async (query: string, label: string) => {
     setLoadingQuestion(label);
-    await handleSendMessage(query);
+    await handleSendMessage(query, undefined);
     setLoadingQuestion(null);
+  };
+
+  const handleAnalysisTypeClick = (type: AnalysisType) => {
+    if (selectedAnalysisType === type) {
+      setSelectedAnalysisType(null);
+    } else {
+      setSelectedAnalysisType(type);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    handleSendMessage(input);
+    handleSendMessage(input, undefined);
   };
 
   return (
@@ -327,15 +399,40 @@ const AimeSidebar = ({ onUpdate, hideHeader = false }: AimeSidebarProps) => {
         </div>
       </ScrollArea>
 
+      {/* Analysis Type Selector */}
+      <div className="px-3 py-2 border-t border-border shrink-0">
+        <button
+          onClick={() => setShowAnalysisTypes(!showAnalysisTypes)}
+          className="flex items-center justify-between w-full text-xs text-muted-foreground mb-2"
+        >
+          <span className="font-medium">
+            {selectedAnalysisType 
+              ? `📊 ${analysisTypes.find(t => t.id === selectedAnalysisType)?.label}`
+              : '분석 타입 선택'
+            }
+          </span>
+          {showAnalysisTypes ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+        </button>
+        
+        {showAnalysisTypes && (
+          <AnalysisTypeSelector
+            selectedType={selectedAnalysisType}
+            onSelect={handleAnalysisTypeClick}
+            disabled={isTyping}
+            compact
+          />
+        )}
+      </div>
+
       {/* Quick Questions - On-chain focused */}
-      <div className="px-4 py-2 border-t border-border shrink-0">
-        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2">
+      <div className="px-3 py-2 border-t border-border shrink-0">
+        <div className="flex gap-1.5 overflow-x-auto scrollbar-hide">
           {quickQuestions.map((q) => (
             <button
               key={q.label}
               onClick={() => handleQuickQuestion(q.query, q.label)}
               disabled={isTyping || loadingQuestion !== null}
-              className={`shrink-0 px-3 py-1.5 text-xs bg-muted/50 hover:bg-muted rounded-full transition-colors ${
+              className={`shrink-0 px-2.5 py-1 text-[11px] bg-muted/50 hover:bg-muted rounded-full transition-colors ${
                 loadingQuestion === q.label ? 'opacity-50 cursor-wait' : ''
               }`}
             >
@@ -346,19 +443,22 @@ const AimeSidebar = ({ onUpdate, hideHeader = false }: AimeSidebarProps) => {
       </div>
 
       {/* Input */}
-      <form onSubmit={handleSubmit} className="p-4 border-t border-border shrink-0">
+      <form onSubmit={handleSubmit} className="p-3 border-t border-border shrink-0">
         <div className="relative">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="지갑 주소, 토큰, 온체인 데이터 질문..."
-            className="w-full bg-muted/30 border border-border rounded-xl px-4 py-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-all pr-12"
-            disabled={isTyping}
+            placeholder={selectedAnalysisType 
+              ? `${analysisTypes.find(t => t.id === selectedAnalysisType)?.shortLabel} 분석할 코인을 입력...`
+              : "지갑 주소, 토큰, 온체인 데이터 질문..."
+            }
+            className="w-full bg-muted/30 border border-border rounded-xl px-4 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-all pr-12"
+            disabled={isTyping || isLoadingMarket}
           />
           <button
             type="submit"
-            disabled={!input.trim() || isTyping}
+            disabled={!input.trim() || isTyping || isLoadingMarket}
             className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-primary hover:bg-primary/10 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           >
             <Send size={16} />
