@@ -430,15 +430,15 @@ const AimeSidebar = ({ onUpdate, onAnalysisResponse, hideHeader = false }: AimeS
         )}
       </div>
 
-      {/* Quick Questions - On-chain focused */}
+      {/* Quick Questions - Grid layout */}
       <div className="px-3 py-2 border-t border-border shrink-0">
-        <div className="flex gap-1.5 overflow-x-auto scrollbar-hide">
+        <div className="grid grid-cols-3 gap-1.5">
           {quickQuestions.map((q) => (
             <button
               key={q.label}
               onClick={() => handleQuickQuestion(q.query, q.label)}
               disabled={isTyping || loadingQuestion !== null}
-              className={`shrink-0 px-2.5 py-1 text-[11px] bg-muted/50 hover:bg-muted rounded-full transition-colors ${
+              className={`px-2 py-1.5 text-[11px] bg-muted/50 hover:bg-muted rounded-lg transition-colors text-center ${
                 loadingQuestion === q.label ? 'opacity-50 cursor-wait' : ''
               }`}
             >
