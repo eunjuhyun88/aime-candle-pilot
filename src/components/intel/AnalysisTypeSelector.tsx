@@ -92,7 +92,7 @@ const AnalysisTypeSelector: React.FC<AnalysisTypeSelectorProps> = ({
 }) => {
   if (compact) {
     return (
-      <div className="flex gap-1 overflow-x-auto scrollbar-hide pb-1">
+      <div className="grid grid-cols-3 gap-1.5">
         {analysisTypes.map((type) => {
           const Icon = type.icon;
           const isSelected = selectedType === type.id;
@@ -103,15 +103,15 @@ const AnalysisTypeSelector: React.FC<AnalysisTypeSelectorProps> = ({
               onClick={() => onSelect(type.id)}
               disabled={disabled}
               className={cn(
-                "shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-lg transition-all",
+                "flex items-center justify-center gap-1 px-2 py-1.5 text-[11px] rounded-lg transition-all",
                 isSelected
                   ? "bg-primary text-primary-foreground"
                   : "bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground",
                 disabled && "opacity-50 cursor-not-allowed"
               )}
             >
-              <Icon size={12} />
-              <span>{type.shortLabel}</span>
+              <Icon size={11} />
+              <span className="truncate">{type.shortLabel}</span>
             </button>
           );
         })}
