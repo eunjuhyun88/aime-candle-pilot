@@ -73,7 +73,7 @@ export const ChartAnalysisOverlay: React.FC<ChartAnalysisOverlayProps> = ({
   };
 
   return (
-    <div className="absolute inset-0 pointer-events-none overflow-hidden z-10">
+    <div className="absolute inset-0 overflow-hidden" style={{ pointerEvents: 'none' }}>
       {/* Trend Bias Indicator */}
       {trendBias && (
         <div className="absolute top-4 left-4 flex items-center gap-2 pointer-events-auto animate-fade-in">
@@ -104,16 +104,19 @@ export const ChartAnalysisOverlay: React.FC<ChartAnalysisOverlayProps> = ({
       {/* Analysis Zones */}
       {showZones && zones.map((zone, index) => {
         const style = zoneStyles[zone.type];
-        const topPercent = zone.topPercent ?? (priceRange ? calculateY(zone.fromPrice) : 20 + index * 15);
-        const heightPercent = zone.heightPercent ?? 8;
+        // Use explicit positioning if provided
+        const topPercent = zone.topPercent ?? (priceRange ? calculateY(zone.toPrice) : (15 + index * 20));
+        const heightPercent = zone.heightPercent ?? (priceRange 
+          ? Math.abs(calculateY(zone.fromPrice) - calculateY(zone.toPrice)) 
+          : 10);
         
         return (
           <div
             key={zone.id}
             className="absolute left-0 w-full animate-fade-in"
             style={{ 
-              top: `${topPercent}%`, 
-              height: `${heightPercent}%`,
+              top: `${Math.max(0, Math.min(85, topPercent))}%`, 
+              height: `${Math.max(5, heightPercent)}%`,
               animationDelay: `${index * 0.05}s`
             }}
           >
@@ -156,14 +159,15 @@ export const ChartAnalysisOverlay: React.FC<ChartAnalysisOverlayProps> = ({
       {showLevels && priceLevels.map((level, index) => {
         const style = levelStyles[level.type];
         const Icon = style.icon;
-        const yPos = level.y ?? (priceRange ? calculateY(level.price) : 20 + index * 12);
+        // Use y if provided, otherwise calculate from priceRange
+        const yPos = level.y ?? (priceRange ? calculateY(level.price) : (15 + index * 18));
         
         return (
           <div
             key={level.id}
             className="absolute left-0 w-full animate-fade-in"
             style={{ 
-              top: `${yPos}%`,
+              top: `${Math.max(5, Math.min(90, yPos))}%`,
               animationDelay: `${index * 0.03}s`
             }}
           >

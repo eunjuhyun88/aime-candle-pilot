@@ -3,7 +3,7 @@ import { Activity, TrendingUp, Zap, MessageSquare } from 'lucide-react';
 import AppLayout from '@/components/layout/AppLayout';
 import AimeSidebar from '@/components/intel/AimeSidebar';
 import { InsightData } from '@/pages/Intel';
-import ChartAnalysisOverlay from '@/components/chart/ChartAnalysisOverlay';
+import ChartAnalysisOverlay, { PriceLevel, AnalysisZone, TrendBias } from '@/components/chart/ChartAnalysisOverlay';
 import AnalysisControlPanel from '@/components/chart/AnalysisControlPanel';
 import useChartAnalysis, { ChartAnalysisData } from '@/hooks/useChartAnalysis';
 
@@ -20,6 +20,21 @@ interface ContextData {
   sentiment: string;
   news: string;
 }
+
+// Demo data for visible overlay
+const demoLevels: PriceLevel[] = [
+  { id: 'r1', price: 98500, type: 'resistance', label: 'R1', strength: 'strong' },
+  { id: 'e1', price: 96800, type: 'entry', label: '진입', strength: 'medium' },
+  { id: 's1', price: 94200, type: 'support', label: 'S1', strength: 'strong' },
+  { id: 'sl1', price: 92500, type: 'stop', label: 'SL', strength: 'medium' },
+];
+
+const demoZones: AnalysisZone[] = [
+  { id: 'z1', fromPrice: 98000, toPrice: 99000, type: 'supply', label: 'Supply Zone', intensity: 'high', topPercent: 10, heightPercent: 12 },
+  { id: 'z2', fromPrice: 93500, toPrice: 94500, type: 'demand', label: 'Demand Zone', intensity: 'high', topPercent: 70, heightPercent: 12 },
+];
+
+const demoBias: TrendBias = { direction: 'bullish', confidence: 72, timeframe: '4H' };
 
 const TradingTerminal = () => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
@@ -183,18 +198,21 @@ const TradingTerminal = () => {
             id="tradingview_chart" 
             ref={chartContainerRef} 
             className="absolute inset-0 bg-[#0B0E11]"
+            style={{ zIndex: 1 }}
           />
           
-          {/* Chart Analysis Overlay */}
-          <ChartAnalysisOverlay
-            priceLevels={analysisData.priceLevels}
-            zones={analysisData.zones}
-            trendBias={analysisData.trendBias}
-            currentPrice={getCurrentPrice()}
-            priceRange={analysisData.priceRange}
-            showLevels={showLevels}
-            showZones={showZones}
-          />
+          {/* Chart Analysis Overlay - Above TradingView */}
+          <div className="absolute inset-0" style={{ zIndex: 20, pointerEvents: 'none' }}>
+            <ChartAnalysisOverlay
+              priceLevels={analysisData.priceLevels.length > 0 ? analysisData.priceLevels : demoLevels}
+              zones={analysisData.zones.length > 0 ? analysisData.zones : demoZones}
+              trendBias={analysisData.trendBias || demoBias}
+              currentPrice={getCurrentPrice()}
+              priceRange={analysisData.priceRange || { high: getCurrentPrice() * 1.05, low: getCurrentPrice() * 0.95 }}
+              showLevels={showLevels}
+              showZones={showZones}
+            />
+          </div>
         </div>
 
         {/* Bottom Context Bar - Compact */}
