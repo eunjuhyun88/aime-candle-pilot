@@ -26,6 +26,52 @@ interface AnalysisTypeOption {
   prompt: string;
 }
 
+interface AnalysisTypeColors {
+  bg: string;
+  bgSelected: string;
+  text: string;
+  border: string;
+}
+
+const analysisColors: Record<AnalysisType, AnalysisTypeColors> = {
+  'htf-ltf': {
+    bg: 'bg-blue-500/10',
+    bgSelected: 'bg-blue-500',
+    text: 'text-blue-400',
+    border: 'border-blue-500/30',
+  },
+  'valuation': {
+    bg: 'bg-amber-500/10',
+    bgSelected: 'bg-amber-500',
+    text: 'text-amber-400',
+    border: 'border-amber-500/30',
+  },
+  'onchain': {
+    bg: 'bg-purple-500/10',
+    bgSelected: 'bg-purple-500',
+    text: 'text-purple-400',
+    border: 'border-purple-500/30',
+  },
+  'vpa': {
+    bg: 'bg-emerald-500/10',
+    bgSelected: 'bg-emerald-500',
+    text: 'text-emerald-400',
+    border: 'border-emerald-500/30',
+  },
+  'ict': {
+    bg: 'bg-rose-500/10',
+    bgSelected: 'bg-rose-500',
+    text: 'text-rose-400',
+    border: 'border-rose-500/30',
+  },
+  'wyckoff': {
+    bg: 'bg-cyan-500/10',
+    bgSelected: 'bg-cyan-500',
+    text: 'text-cyan-400',
+    border: 'border-cyan-500/30',
+  },
+};
+
 export const analysisTypes: AnalysisTypeOption[] = [
   {
     id: 'htf-ltf',
@@ -96,6 +142,7 @@ const AnalysisTypeSelector: React.FC<AnalysisTypeSelectorProps> = ({
         {analysisTypes.map((type) => {
           const Icon = type.icon;
           const isSelected = selectedType === type.id;
+          const colors = analysisColors[type.id];
           
           return (
             <button
@@ -103,10 +150,10 @@ const AnalysisTypeSelector: React.FC<AnalysisTypeSelectorProps> = ({
               onClick={() => onSelect(type.id)}
               disabled={disabled}
               className={cn(
-                "flex items-center justify-center gap-1 px-2 py-1.5 text-[11px] rounded-lg transition-all",
+                "flex items-center justify-center gap-1 px-2 py-1.5 text-[11px] rounded-lg transition-all border",
                 isSelected
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground",
+                  ? `${colors.bgSelected} text-white border-transparent`
+                  : `${colors.bg} ${colors.text} ${colors.border} hover:opacity-80`,
                 disabled && "opacity-50 cursor-not-allowed"
               )}
             >
