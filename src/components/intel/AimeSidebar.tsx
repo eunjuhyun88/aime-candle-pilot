@@ -49,6 +49,7 @@ const AimeSidebar = ({ onUpdate, onAnalysisResponse, hideHeader = false }: AimeS
   const [loadingQuestion, setLoadingQuestion] = useState<string | null>(null);
   const [selectedAnalysisType, setSelectedAnalysisType] = useState<AnalysisType | null>(null);
   const [showAnalysisTypes, setShowAnalysisTypes] = useState(true);
+  const [currentSymbol, setCurrentSymbol] = useState('BTC');
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -103,6 +104,11 @@ const AimeSidebar = ({ onUpdate, onAnalysisResponse, hideHeader = false }: AimeS
     
     const activeAnalysisType = analysisTypeOverride || selectedAnalysisType;
     const symbol = extractSymbol(messageText);
+    
+    // Update current symbol for metrics display
+    if (symbol) {
+      setCurrentSymbol(symbol);
+    }
     
     // Fetch market data if symbol is detected
     let marketDataContext = '';
@@ -352,7 +358,7 @@ const AimeSidebar = ({ onUpdate, onAnalysisResponse, hideHeader = false }: AimeS
       )}
 
       {/* On-chain Metrics Dashboard */}
-      {!hideHeader && <OnchainMetrics />}
+      {!hideHeader && <OnchainMetrics symbol={currentSymbol} />}
 
       {/* Messages */}
       <ScrollArea className="flex-1 p-3">

@@ -7,7 +7,7 @@ export interface PriceLevel {
   type: 'support' | 'resistance' | 'entry' | 'target' | 'stop' | 'liquidation' | 'whale';
   label: string;
   strength?: 'strong' | 'medium' | 'weak';
-  y?: number; // Percentage from top
+  y?: number;
 }
 
 export interface AnalysisZone {
@@ -38,51 +38,46 @@ export interface ChartAnalysisOverlayProps {
 }
 
 const levelStyles = {
-  support: { color: 'hsl(var(--signal-green))', bgColor: 'hsl(var(--signal-green) / 0.15)', icon: Shield },
-  resistance: { color: 'hsl(var(--signal-red))', bgColor: 'hsl(var(--signal-red) / 0.15)', icon: AlertTriangle },
-  entry: { color: 'hsl(var(--primary))', bgColor: 'hsl(var(--primary) / 0.2)', icon: Target },
-  target: { color: 'hsl(var(--signal-green))', bgColor: 'hsl(var(--signal-green) / 0.2)', icon: TrendingUp },
-  stop: { color: 'hsl(var(--signal-red))', bgColor: 'hsl(var(--signal-red) / 0.2)', icon: TrendingDown },
-  liquidation: { color: 'hsl(38, 92%, 50%)', bgColor: 'hsl(38, 92%, 50% / 0.2)', icon: Flame },
-  whale: { color: 'hsl(var(--primary))', bgColor: 'hsl(var(--primary) / 0.15)', icon: Activity },
+  support: { color: 'hsl(142, 71%, 45%)', label: 'S', icon: Shield },
+  resistance: { color: 'hsl(0, 84%, 60%)', label: 'R', icon: AlertTriangle },
+  entry: { color: 'hsl(199, 89%, 48%)', label: 'E', icon: Target },
+  target: { color: 'hsl(142, 71%, 45%)', label: 'TP', icon: TrendingUp },
+  stop: { color: 'hsl(0, 84%, 60%)', label: 'SL', icon: TrendingDown },
+  liquidation: { color: 'hsl(38, 92%, 50%)', label: 'LIQ', icon: Flame },
+  whale: { color: 'hsl(262, 83%, 58%)', label: 'W', icon: Activity },
 };
 
 const zoneStyles = {
-  accumulation: { color: 'hsl(var(--signal-green))', label: 'ACC' },
-  distribution: { color: 'hsl(var(--signal-red))', label: 'DIST' },
-  demand: { color: 'hsl(160, 84%, 45%)', label: 'DMD' },
-  supply: { color: 'hsl(0, 84%, 60%)', label: 'SPL' },
-  whale: { color: 'hsl(var(--primary))', label: 'WHALE' },
-  liquidity: { color: 'hsl(200, 98%, 55%)', label: 'LIQ' },
+  accumulation: { color: 'hsl(142, 71%, 45%)', label: 'ACC' },
+  distribution: { color: 'hsl(0, 84%, 60%)', label: 'DIST' },
+  demand: { color: 'hsl(160, 84%, 40%)', label: 'DMD' },
+  supply: { color: 'hsl(0, 70%, 55%)', label: 'SPL' },
+  whale: { color: 'hsl(262, 83%, 58%)', label: 'WHALE' },
+  liquidity: { color: 'hsl(199, 89%, 48%)', label: 'LIQ' },
 };
 
 export const ChartAnalysisOverlay: React.FC<ChartAnalysisOverlayProps> = ({
   priceLevels,
   zones,
   trendBias,
-  currentPrice,
-  priceRange,
   showLevels,
   showZones,
 }) => {
-  // Calculate Y position for a price level
-  const calculateY = (price: number): number => {
-    if (!priceRange || priceRange.high === priceRange.low) return 50;
-    const range = priceRange.high - priceRange.low;
-    return ((priceRange.high - price) / range) * 100;
-  };
+  // Only render on right side - no chart price-based positioning
+  const sortedLevels = [...priceLevels].sort((a, b) => b.price - a.price);
+  const sortedZones = [...zones].sort((a, b) => b.toPrice - a.toPrice);
 
   return (
     <div className="absolute inset-0 overflow-hidden" style={{ pointerEvents: 'none' }}>
-      {/* Trend Bias Indicator */}
+      {/* Trend Bias Indicator - Top Left */}
       {trendBias && (
-        <div className="absolute top-4 left-4 flex items-center gap-2 pointer-events-auto animate-fade-in">
+        <div className="absolute top-3 left-3 pointer-events-auto z-10">
           <div 
-            className={`px-3 py-1.5 rounded-lg backdrop-blur-sm border flex items-center gap-2 ${
+            className={`px-3 py-1.5 rounded-lg backdrop-blur-md border flex items-center gap-2 shadow-lg ${
               trendBias.direction === 'bullish' 
-                ? 'bg-signal-green/20 border-signal-green/40 text-signal-green'
+                ? 'bg-green-500/20 border-green-500/50 text-green-400'
                 : trendBias.direction === 'bearish'
-                ? 'bg-signal-red/20 border-signal-red/40 text-signal-red'
+                ? 'bg-red-500/20 border-red-500/50 text-red-400'
                 : 'bg-muted/50 border-border text-muted-foreground'
             }`}
           >
@@ -94,153 +89,121 @@ export const ChartAnalysisOverlay: React.FC<ChartAnalysisOverlayProps> = ({
               <Activity size={14} />
             )}
             <span className="text-xs font-bold uppercase tracking-wider">
-              {trendBias.direction} {trendBias.confidence}%
+              {trendBias.direction === 'bullish' ? '상승' : trendBias.direction === 'bearish' ? '하락' : '중립'} {trendBias.confidence}%
             </span>
             <span className="text-[10px] opacity-70">{trendBias.timeframe}</span>
           </div>
         </div>
       )}
 
-      {/* Analysis Zones */}
-      {showZones && zones.map((zone, index) => {
-        const style = zoneStyles[zone.type];
-        // Use explicit positioning if provided
-        const topPercent = zone.topPercent ?? (priceRange ? calculateY(zone.toPrice) : (15 + index * 20));
-        const heightPercent = zone.heightPercent ?? (priceRange 
-          ? Math.abs(calculateY(zone.fromPrice) - calculateY(zone.toPrice)) 
-          : 10);
-        
-        return (
-          <div
-            key={zone.id}
-            className="absolute left-0 w-full animate-fade-in"
-            style={{ 
-              top: `${Math.max(0, Math.min(85, topPercent))}%`, 
-              height: `${Math.max(5, heightPercent)}%`,
-              animationDelay: `${index * 0.05}s`
-            }}
-          >
-            <div 
-              className="h-full border-y transition-all duration-500"
-              style={{ 
-                backgroundColor: `${style.color.replace(')', ' / 0.08)')}`,
-                borderColor: `${style.color.replace(')', ` / ${zone.intensity === 'high' ? '0.4' : zone.intensity === 'medium' ? '0.25' : '0.15'})`)}`,
-                boxShadow: zone.intensity === 'high' 
-                  ? `inset 0 0 30px ${style.color.replace(')', ' / 0.1)')}`
-                  : 'none'
-              }}
-            >
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+      {/* Right Side Panel - Price Levels */}
+      {showLevels && sortedLevels.length > 0 && (
+        <div className="absolute right-3 top-14 flex flex-col gap-1.5 z-10">
+          {sortedLevels.slice(0, 6).map((level) => {
+            const style = levelStyles[level.type];
+            const Icon = style.icon;
+            
+            return (
+              <div
+                key={level.id}
+                className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg backdrop-blur-md border shadow-sm pointer-events-auto transition-all hover:scale-105"
+                style={{ 
+                  backgroundColor: `${style.color}20`,
+                  borderColor: `${style.color}50`,
+                }}
+              >
+                <div 
+                  className="w-5 h-5 rounded flex items-center justify-center"
+                  style={{ backgroundColor: `${style.color}30` }}
+                >
+                  <Icon size={11} style={{ color: style.color }} />
+                </div>
+                <div className="flex flex-col">
+                  <span 
+                    className="text-[10px] font-bold font-mono"
+                    style={{ color: style.color }}
+                  >
+                    ${level.price.toLocaleString()}
+                  </span>
+                  <span className="text-[8px] text-muted-foreground uppercase">
+                    {level.label || style.label}
+                  </span>
+                </div>
+                {level.strength && (
+                  <div className="flex gap-0.5 ml-1">
+                    {[1, 2, 3].map((i) => (
+                      <div
+                        key={i}
+                        className="w-1 h-2 rounded-sm"
+                        style={{ 
+                          backgroundColor: i <= (level.strength === 'strong' ? 3 : level.strength === 'medium' ? 2 : 1) 
+                            ? style.color 
+                            : `${style.color}30` 
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Bottom Zone Legend */}
+      {showZones && sortedZones.length > 0 && (
+        <div className="absolute bottom-3 left-3 flex flex-wrap gap-1.5 z-10">
+          {sortedZones.map((zone) => {
+            const style = zoneStyles[zone.type];
+            
+            return (
+              <div
+                key={zone.id}
+                className="flex items-center gap-1.5 px-2 py-1 rounded-md backdrop-blur-md border pointer-events-auto transition-all hover:scale-105"
+                style={{ 
+                  backgroundColor: `${style.color}15`,
+                  borderColor: `${style.color}40`,
+                }}
+              >
                 {zone.intensity === 'high' && (
                   <div 
-                    className="w-2 h-2 rounded-full animate-pulse"
+                    className="w-1.5 h-1.5 rounded-full animate-pulse"
                     style={{ backgroundColor: style.color }}
                   />
                 )}
                 <span 
-                  className="text-[9px] font-mono font-bold uppercase tracking-wider px-1.5 py-0.5 rounded"
-                  style={{ 
-                    color: style.color,
-                    backgroundColor: `${style.color.replace(')', ' / 0.15)')}`
-                  }}
+                  className="text-[9px] font-bold uppercase tracking-wider"
+                  style={{ color: style.color }}
                 >
                   {style.label}
                 </span>
-                <span className="text-[10px] font-mono opacity-60" style={{ color: style.color }}>
-                  {zone.label}
-                </span>
-              </div>
-            </div>
-          </div>
-        );
-      })}
-
-      {/* Price Levels */}
-      {showLevels && priceLevels.map((level, index) => {
-        const style = levelStyles[level.type];
-        const Icon = style.icon;
-        // Use y if provided, otherwise calculate from priceRange
-        const yPos = level.y ?? (priceRange ? calculateY(level.price) : (15 + index * 18));
-        
-        return (
-          <div
-            key={level.id}
-            className="absolute left-0 w-full animate-fade-in"
-            style={{ 
-              top: `${Math.max(5, Math.min(90, yPos))}%`,
-              animationDelay: `${index * 0.03}s`
-            }}
-          >
-            <div className="relative">
-              {/* Line */}
-              <div 
-                className="h-[1px] w-full"
-                style={{ 
-                  background: `linear-gradient(90deg, transparent 0%, ${style.color} 20%, ${style.color} 80%, transparent 100%)`,
-                  boxShadow: `0 0 8px ${style.color.replace(')', ' / 0.3)')}`
-                }}
-              />
-              
-              {/* Label */}
-              <div 
-                className="absolute right-4 -top-3 px-2 py-0.5 rounded flex items-center gap-1.5 backdrop-blur-sm"
-                style={{ 
-                  backgroundColor: style.bgColor,
-                  border: `1px solid ${style.color.replace(')', ' / 0.4)')}`
-                }}
-              >
-                <Icon size={10} style={{ color: style.color }} />
                 <span 
-                  className="text-[9px] font-mono font-bold"
+                  className="text-[8px] font-mono opacity-70"
                   style={{ color: style.color }}
                 >
-                  ${level.price.toLocaleString()}
+                  ${zone.fromPrice.toLocaleString()}-${zone.toPrice.toLocaleString()}
                 </span>
-                {level.label && (
-                  <span 
-                    className="text-[8px] opacity-70 uppercase"
-                    style={{ color: style.color }}
-                  >
-                    {level.label}
-                  </span>
-                )}
               </div>
-            </div>
-          </div>
-        );
-      })}
-
-      {/* Current Price Marker */}
-      {currentPrice && priceRange && (
-        <div
-          className="absolute left-0 w-full animate-pulse"
-          style={{ top: `${calculateY(currentPrice)}%` }}
-        >
-          <div className="relative">
-            <div 
-              className="h-[2px] w-full"
-              style={{ 
-                background: 'linear-gradient(90deg, transparent 0%, hsl(var(--foreground)) 50%, transparent 100%)',
-              }}
-            />
-            <div className="absolute left-4 -top-3 px-2 py-0.5 rounded bg-foreground text-background text-[9px] font-mono font-bold">
-              ${currentPrice.toLocaleString()}
-            </div>
-          </div>
+            );
+          })}
         </div>
       )}
 
-      {/* Grid Pattern */}
+      {/* Subtle scan line animation */}
       <div 
-        className="absolute inset-0 opacity-[0.015]"
+        className="absolute inset-0 pointer-events-none opacity-[0.02]"
         style={{
-          backgroundImage: `
-            linear-gradient(hsl(var(--foreground)) 1px, transparent 1px),
-            linear-gradient(90deg, hsl(var(--foreground)) 1px, transparent 1px)
-          `,
-          backgroundSize: '50px 50px'
+          background: 'repeating-linear-gradient(0deg, transparent, transparent 2px, hsl(var(--foreground)) 2px, hsl(var(--foreground)) 3px)',
+          animation: 'scanline 8s linear infinite',
         }}
       />
+      
+      <style>{`
+        @keyframes scanline {
+          0% { transform: translateY(-100%); }
+          100% { transform: translateY(100%); }
+        }
+      `}</style>
     </div>
   );
 };
