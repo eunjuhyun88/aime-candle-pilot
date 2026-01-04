@@ -13,19 +13,19 @@ interface MetricCardProps {
 }
 
 const MetricCard = ({ icon: Icon, label, value, change, isPositive, color, isLoading }: MetricCardProps) => (
-  <div className={`p-2.5 rounded-xl bg-muted/30 border border-border hover:border-primary/30 transition-all group ${isLoading ? 'animate-pulse' : ''}`}>
-    <div className="flex items-center gap-2 mb-1.5">
-      <div className={`w-6 h-6 rounded-lg ${color} flex items-center justify-center`}>
-        <Icon size={12} className="text-foreground" />
+  <div className={`px-1.5 py-1 rounded-md bg-muted/20 border border-border/50 ${isLoading ? 'animate-pulse' : ''}`}>
+    <div className="flex items-center gap-1 mb-0.5">
+      <div className={`w-4 h-4 rounded ${color} flex items-center justify-center`}>
+        <Icon size={8} className="text-foreground" />
       </div>
-      <span className="text-[9px] text-muted-foreground font-medium uppercase tracking-wider">{label}</span>
+      <span className="text-[8px] text-muted-foreground font-medium truncate">{label}</span>
     </div>
-    <div className="flex items-baseline gap-1.5">
-      <span className={`text-sm font-bold ${isLoading ? 'text-muted-foreground' : ''}`}>
+    <div className="flex items-baseline gap-1">
+      <span className={`text-[10px] font-bold ${isLoading ? 'text-muted-foreground' : ''}`}>
         {isLoading ? '...' : value}
       </span>
       {change && !isLoading && (
-        <span className={`text-[9px] font-medium ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
+        <span className={`text-[8px] font-medium ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
           {isPositive ? '+' : ''}{change}
         </span>
       )}
@@ -119,21 +119,18 @@ const OnchainMetrics: React.FC<OnchainMetricsProps> = ({ symbol = 'BTC' }) => {
   ];
 
   return (
-    <div className="p-2.5 border-b border-border">
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-[10px] text-muted-foreground font-medium">실시간 마켓 데이터</span>
+    <div className="px-2 py-1.5 border-b border-border">
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-[9px] text-muted-foreground font-medium">실시간 데이터</span>
         <button 
           onClick={loadData}
           disabled={isLoading}
-          className="flex items-center gap-1 text-[9px] text-muted-foreground hover:text-foreground transition-colors"
+          className="flex items-center gap-0.5 text-[8px] text-muted-foreground hover:text-foreground"
         >
-          <RefreshCw size={10} className={isLoading ? 'animate-spin' : ''} />
-          {lastUpdate && (
-            <span>{lastUpdate.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</span>
-          )}
+          <RefreshCw size={8} className={isLoading ? 'animate-spin' : ''} />
         </button>
       </div>
-      <div className="grid grid-cols-2 gap-1.5">
+      <div className="grid grid-cols-3 gap-1">
         {displayMetrics.map((metric, idx) => (
           <MetricCard key={idx} {...metric} isLoading={isLoading && metrics.price === 0} />
         ))}

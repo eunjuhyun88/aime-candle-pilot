@@ -44,13 +44,13 @@ interface AppLayoutProps {
 
 const MIN_PANEL_HEIGHT = 150;
 const MAX_PANEL_HEIGHT_RATIO = 0.85;
-const MIN_PANEL_WIDTH = 280;
-const MAX_PANEL_WIDTH = 600;
-const DEFAULT_PANEL_WIDTH = 340;
+const MIN_PANEL_WIDTH = 260;
+const MAX_PANEL_WIDTH = 420;
+const DEFAULT_PANEL_WIDTH = 300;
 
 const AppLayout = ({ children, showAiPanel = false, aiPanel }: AppLayoutProps) => {
   const location = useLocation();
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true); // Default collapsed
   const [isMobile, setIsMobile] = useState(false);
   const [showMobileAi, setShowMobileAi] = useState(false);
   const [panelHeight, setPanelHeight] = useState(window.innerHeight * 0.5);
