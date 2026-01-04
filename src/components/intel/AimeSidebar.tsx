@@ -336,22 +336,19 @@ const AimeSidebar = ({ onUpdate, onAnalysisResponse, hideHeader = false }: AimeS
 
   return (
     <div className="h-full flex flex-col bg-card">
-      {/* Header - hidden on mobile when used in bottom sheet */}
+      {/* Header - Compact */}
       {!hideHeader && (
-        <div className="p-3 border-b border-border shrink-0">
+        <div className="px-2 py-1.5 border-b border-border shrink-0">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-primary/20 flex items-center justify-center">
-                <Sparkles size={14} className="text-primary" />
+            <div className="flex items-center gap-1.5">
+              <div className="w-5 h-5 rounded bg-primary/20 flex items-center justify-center">
+                <Sparkles size={10} className="text-primary" />
               </div>
-              <div>
-                <h3 className="text-sm font-bold">Alpha Agent</h3>
-                <p className="text-[10px] text-muted-foreground">On-chain AI</p>
-              </div>
+              <span className="text-xs font-bold">Alpha Agent</span>
             </div>
             <div className="flex items-center gap-1">
               <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-[10px] text-green-500">Live</span>
+              <span className="text-[9px] text-green-500">Live</span>
             </div>
           </div>
         </div>
@@ -361,32 +358,28 @@ const AimeSidebar = ({ onUpdate, onAnalysisResponse, hideHeader = false }: AimeS
       {!hideHeader && <OnchainMetrics symbol={currentSymbol} />}
 
       {/* Messages */}
-      <ScrollArea className="flex-1 p-3">
-        <div ref={scrollRef} className="space-y-4">
+      <ScrollArea className="flex-1 p-2">
+        <div ref={scrollRef} className="space-y-2">
           {messages.map((message) => (
             <div
               key={message.id}
               className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}
             >
               {message.role === 'assistant' ? (
-                <div className="max-w-[90%] bg-muted/30 p-3 rounded-2xl rounded-tl-none border border-border">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center">
-                      <Bot size={10} className="text-primary" />
-                    </div>
-                    <span className="text-[10px] text-muted-foreground">{message.timestamp}</span>
+                <div className="max-w-[95%] bg-muted/30 px-2 py-1.5 rounded-lg rounded-tl-none border border-border">
+                  <div className="flex items-center gap-1 mb-1">
+                    <Bot size={8} className="text-primary" />
+                    <span className="text-[9px] text-muted-foreground">{message.timestamp}</span>
                   </div>
-                  <p className="text-sm leading-relaxed whitespace-pre-line">{message.content}</p>
+                  <p className="text-xs leading-relaxed whitespace-pre-line">{message.content}</p>
                 </div>
               ) : (
-                <div className="max-w-[85%] bg-primary text-primary-foreground p-3 rounded-2xl rounded-tr-none">
-                  <div className="flex items-center gap-2 mb-2 justify-end">
-                    <span className="text-[10px] opacity-70">{message.timestamp}</span>
-                    <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center">
-                      <User size={10} />
-                    </div>
+                <div className="max-w-[90%] bg-primary text-primary-foreground px-2 py-1.5 rounded-lg rounded-tr-none">
+                  <div className="flex items-center gap-1 mb-1 justify-end">
+                    <span className="text-[9px] opacity-70">{message.timestamp}</span>
+                    <User size={8} />
                   </div>
-                  <p className="text-sm leading-relaxed">{message.content}</p>
+                  <p className="text-xs leading-relaxed">{message.content}</p>
                 </div>
               )}
             </div>
