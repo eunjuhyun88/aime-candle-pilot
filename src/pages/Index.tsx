@@ -92,49 +92,59 @@ const TradingTerminal = () => {
     const container = chartContainerRef.current;
     if (!container) return;
 
-    container.innerHTML = '';
+    const initWidget = () => {
+      if (!window.TradingView) return;
+      
+      container.innerHTML = '';
+      
+      new window.TradingView.widget({
+        container_id: 'tradingview_chart',
+        width: '100%',
+        height: '100%',
+        symbol: selectedSymbol,
+        interval: '60',
+        timezone: 'Asia/Seoul',
+        theme: 'dark',
+        style: '1',
+        locale: 'ko',
+        toolbar_bg: '#161B22',
+        enable_publishing: false,
+        hide_top_toolbar: false,
+        hide_legend: false,
+        hide_side_toolbar: false,
+        allow_symbol_change: true,
+        save_image: false,
+        withdateranges: true,
+        details: true,
+        hotlist: true,
+        calendar: true,
+        studies: ['RSI@tv-basicstudies', 'MACD@tv-basicstudies', 'Volume@tv-basicstudies'],
+        show_popup_button: true,
+        popup_width: '1000',
+        popup_height: '650',
+        backgroundColor: '#0B0E11',
+        gridColor: '#161B22',
+      });
+    };
+
+    // TradingView 스크립트가 이미 로드되어 있으면 바로 초기화
+    if (window.TradingView) {
+      initWidget();
+      return;
+    }
+
+    // 스크립트가 없으면 로드
+    const existingScript = document.querySelector('script[src="https://s3.tradingview.com/tv.js"]');
+    if (existingScript) {
+      existingScript.addEventListener('load', initWidget);
+      return;
+    }
 
     const script = document.createElement('script');
     script.src = 'https://s3.tradingview.com/tv.js';
     script.async = true;
-    script.onload = () => {
-      if (window.TradingView) {
-        new window.TradingView.widget({
-          container_id: container.id,
-          autosize: true,
-          symbol: selectedSymbol,
-          interval: '60',
-          timezone: 'Asia/Seoul',
-          theme: 'dark',
-          style: '1',
-          locale: 'ko',
-          toolbar_bg: '#161B22',
-          enable_publishing: false,
-          hide_top_toolbar: false,
-          hide_legend: false,
-          hide_side_toolbar: false,
-          allow_symbol_change: true,
-          save_image: false,
-          withdateranges: true,
-          details: true,
-          hotlist: true,
-          calendar: true,
-          studies: ['RSI@tv-basicstudies', 'MACD@tv-basicstudies', 'Volume@tv-basicstudies'],
-          show_popup_button: true,
-          popup_width: '1000',
-          popup_height: '650',
-          backgroundColor: '#0B0E11',
-          gridColor: '#161B22',
-        });
-      }
-    };
+    script.onload = initWidget;
     document.head.appendChild(script);
-
-    return () => {
-      if (script.parentNode) {
-        script.parentNode.removeChild(script);
-      }
-    };
   }, [selectedSymbol]);
 
   const AiPanel = (
